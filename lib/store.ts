@@ -95,11 +95,29 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   },
 
   setSelectedAnnotation: (id: string | null) => {
+    const { annotations, currentImageIndex, images, classLabels } = get();
     set({ selectedAnnotationId: id });
+    
+    if (id) {
+      const imageId = images[currentImageIndex].id;
+      const existing = annotations[imageId] || [];
+      const ann = existing.find((a) => a.id === id);
+      if (ann) {
+        const labelObj = classLabels.find((c) => c.name === ann.label);
+        if (labelObj) {
+          set({ activeClassLabel: labelObj });
+        }
+      }
+    }
   },
 
   setActiveClassLabel: (label: ClassLabel) => {
+    const { selectedAnnotationId } = get();
     set({ activeClassLabel: label });
+    
+    if (selectedAnnotationId) {
+      get().updateAnnotation(selectedAnnotationId, { label: label.name, color: label.color });
+    }
   },
 
   deleteSelectedAnnotation: () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useAnnotationStore, useCurrentAnnotations } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,9 +30,13 @@ export default function TopToolbar() {
     <div className="h-14 flex items-center justify-between border-b border-border bg-card px-4 shrink-0">
       {/* Left: Logo */}
       <div className="flex items-center gap-2.5">
-        <div className="flex items-center justify-center size-8 bg-primary text-primary-foreground">
-          <IconBox className="size-4" />
-        </div>
+        <Image
+          src="/boxify.svg"
+          alt="Boxify"
+          width={32}
+          height={32}
+          className="size-8"
+        />
         <span className="text-sm font-semibold tracking-tight text-foreground">
           BOXIFY
         </span>
