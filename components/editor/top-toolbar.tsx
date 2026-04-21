@@ -1,13 +1,8 @@
 "use client";
 
-import {
-  useAnnotationStore,
-  useCurrentImage,
-  useCurrentAnnotations,
-} from "@/lib/store";
+import { useAnnotationStore, useCurrentAnnotations } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -25,7 +20,6 @@ export default function TopToolbar() {
   const images = useAnnotationStore((s) => s.images);
   const nextImage = useAnnotationStore((s) => s.nextImage);
   const prevImage = useAnnotationStore((s) => s.prevImage);
-  const currentImage = useCurrentImage();
   const annotations = useCurrentAnnotations();
 
   const isFirst = currentImageIndex === 0;
@@ -40,10 +34,6 @@ export default function TopToolbar() {
         </div>
         <span className="text-sm font-semibold tracking-tight text-foreground">
           BOXIFY
-        </span>
-        <Separator orientation="vertical" className="h-6 mx-1" />
-        <span className="text-xs text-muted-foreground truncate max-w-48">
-          {currentImage.name}
         </span>
       </div>
 
