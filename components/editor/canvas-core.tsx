@@ -402,7 +402,8 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
               height={drawingRect.height}
               fill={store.activeClassLabel.color + "26"}
               stroke={store.activeClassLabel.color}
-              strokeWidth={2 / viewState.scale}
+              strokeWidth={2}
+              strokeScaleEnabled={false}
               dash={[6 / viewState.scale, 4 / viewState.scale]}
             />
           )}
@@ -413,10 +414,10 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
             flipEnabled={false}
             rotateEnabled={false}
             borderStroke="#fff"
-            borderStrokeWidth={1 / viewState.scale}
+            borderStrokeWidth={1}
             anchorFill="#fff"
             anchorStroke="#333"
-            anchorSize={8 / viewState.scale}
+            anchorSize={8}
             anchorCornerRadius={0}
             padding={0}
           />
@@ -481,7 +482,6 @@ function AnnotationRect({
 }: AnnotationRectProps) {
   const labelFontSize = Math.max(10, 12 / scale);
   const labelPadding = 3 / scale;
-  const strokeWidth = isSelected ? 2.5 / scale : 1.5 / scale;
 
   return (
     <>
@@ -507,7 +507,8 @@ function AnnotationRect({
         height={ann.height}
         fill={ann.color + (isSelected ? "33" : "1A")}
         stroke={ann.color}
-        strokeWidth={strokeWidth}
+        strokeWidth={isSelected ? 2.5 : 1.5}
+        strokeScaleEnabled={false}
         draggable={isSelected}
         onClick={onSelect}
         onTap={onSelect}

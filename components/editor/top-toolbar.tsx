@@ -7,14 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
-  TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  IconChevronLeft,
-  IconChevronRight,
-  IconBox,
-} from "@tabler/icons-react";
+import { IconChevronLeft, IconChevronRight } from "@tabler/icons-react";
 
 export default function TopToolbar() {
   const currentImageIndex = useAnnotationStore((s) => s.currentImageIndex);
@@ -44,22 +39,20 @@ export default function TopToolbar() {
 
       {/* Center: Navigation */}
       <div className="flex items-center gap-1.5">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                id="btn-prev-image"
-                variant="outline"
-                size="icon-sm"
-                onClick={prevImage}
-                disabled={isFirst}
-              >
-                <IconChevronLeft className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Previous image</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              id="btn-prev-image"
+              variant="outline"
+              size="icon-sm"
+              onClick={prevImage}
+              disabled={isFirst}
+            >
+              <IconChevronLeft className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Previous image</TooltipContent>
+        </Tooltip>
 
         <div className="flex items-center gap-1 px-3 min-w-[80px] justify-center">
           <span className="text-sm font-medium tabular-nums text-foreground">
@@ -71,22 +64,20 @@ export default function TopToolbar() {
           </span>
         </div>
 
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                id="btn-next-image"
-                variant="outline"
-                size="icon-sm"
-                onClick={nextImage}
-                disabled={isLast}
-              >
-                <IconChevronRight className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Next image</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              id="btn-next-image"
+              variant="outline"
+              size="icon-sm"
+              onClick={nextImage}
+              disabled={isLast}
+            >
+              <IconChevronRight className="size-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Next image</TooltipContent>
+        </Tooltip>
       </div>
 
       {/* Right: Status */}
