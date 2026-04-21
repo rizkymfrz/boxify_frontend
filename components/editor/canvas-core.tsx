@@ -43,51 +43,81 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
   const annotations = useCurrentAnnotations();
   const [loadedImage, imageStatus] = useImage(currentImage.url);
 
-  // ── Local drawing state ──
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
-  const [drawingRect, setDrawingRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [crosshairPos, setCrosshairPos] = useState<{ x: number; y: number } | null>(null);
+  // ── View State (Zoom & Pan) ──
+  const [viewState, setViewState] = useState({ scale: 1, x: 0, y: 0 });
+  const [imgDim, setImgDim] = useState({ w: 0, h: 0 });
 
-  // ── Refs ──
-  const stageRef = useRef<Konva.Stage>(null);
-  const transformerRef = useRef<Konva.Transformer>(null);
-
-  // ── Image scale & offset calculation ──
-  const { scale, offsetX, offsetY, imgW, imgH } = useMemo(() => {
-    if (!loadedImage) return { scale: 1, offsetX: 0, offsetY: 0, imgW: 0, imgH: 0 };
+  // Initialize view state when image loads or container changes
+  useEffect(() => {
+    if (!loadedImage || containerWidth === 0 || containerHeight === 0) return;
     const w = loadedImage.naturalWidth || loadedImage.width;
     const h = loadedImage.naturalHeight || loadedImage.height;
     const scaleX = containerWidth / w;
     const scaleY = containerHeight / h;
     const s = Math.min(scaleX, scaleY) * 0.95; // 5% padding
-    return {
+    
+    setViewState({
       scale: s,
-      offsetX: (containerWidth - w * s) / 2,
-      offsetY: (containerHeight - h * s) / 2,
-      imgW: w,
-      imgH: h,
+      x: (containerWidth - w * s) / 2,
+      y: (containerHeight - h * s) / 2,
+    });
+    setImgDim({ w, h });
+  }, [loadedImage, containerWidth, containerHeight, currentImage.url]);
+
+  // ── Local drawing & panning state ──
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
+  const [drawingRect, setDrawingRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [crosshairPos, setCrosshairPos] = useState<{ x: number; y: number } | null>(null);
+  
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
+  const [isSpaceDown, setIsSpaceDown] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === "Space" && !e.repeat) {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        e.preventDefault();
+        setIsSpaceDown(true);
+      }
     };
-  }, [loadedImage, containerWidth, containerHeight]);
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === "Space") {
+        setIsSpaceDown(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, []);
+
+  // ── Refs ──
+  const stageRef = useRef<Konva.Stage>(null);
+  const transformerRef = useRef<Konva.Transformer>(null);
 
   // ── Coordinate conversion: stage → image ──
   const stageToImage = useCallback(
     (stageX: number, stageY: number) => ({
-      x: Math.max(0, Math.min((stageX - offsetX) / scale, imgW)),
-      y: Math.max(0, Math.min((stageY - offsetY) / scale, imgH)),
+      x: Math.max(0, Math.min((stageX - viewState.x) / viewState.scale, imgDim.w)),
+      y: Math.max(0, Math.min((stageY - viewState.y) / viewState.scale, imgDim.h)),
     }),
-    [offsetX, offsetY, scale, imgW, imgH]
+    [viewState.x, viewState.y, viewState.scale, imgDim.w, imgDim.h]
   );
 
   // ── Image boundaries in stage coords (for crosshair clipping) ──
   const imgBounds = useMemo(
     () => ({
-      left: offsetX,
-      top: offsetY,
-      right: offsetX + imgW * scale,
-      bottom: offsetY + imgH * scale,
+      left: viewState.x,
+      top: viewState.y,
+      right: viewState.x + imgDim.w * viewState.scale,
+      bottom: viewState.y + imgDim.h * viewState.scale,
     }),
-    [offsetX, offsetY, imgW, imgH, scale]
+    [viewState.x, viewState.y, viewState.scale, imgDim.w, imgDim.h]
   );
 
   // ── Attach transformer to selected node ──
@@ -108,17 +138,53 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
     tr.getLayer()?.batchDraw();
   }, [store.selectedAnnotationId, annotations]);
 
-  // ── Reset drawing state on image change ──
+  // ── Reset states on image change ──
   useEffect(() => {
     setIsDrawing(false);
     setDrawStart(null);
     setDrawingRect(null);
+    setIsPanning(false);
   }, [store.currentImageIndex]);
+
+  // ── Wheel Zoom Handler ──
+  const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
+    e.evt.preventDefault();
+    const scaleBy = 1.1;
+    const stage = stageRef.current;
+    if (!stage) return;
+    
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return;
+
+    const oldScale = viewState.scale;
+    const mousePointTo = {
+      x: (pointer.x - viewState.x) / oldScale,
+      y: (pointer.y - viewState.y) / oldScale,
+    };
+
+    const newScale = e.evt.deltaY > 0 ? Math.max(oldScale / scaleBy, 0.1) : Math.min(oldScale * scaleBy, 10);
+
+    setViewState({
+      scale: newScale,
+      x: pointer.x - mousePointTo.x * newScale,
+      y: pointer.y - mousePointTo.y * newScale,
+    });
+  }, [viewState]);
 
   // ── Mouse handlers ──
   const handleMouseDown = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
       if (!loadedImage) return;
+
+      // Handle panning (middle or right click, or space + left click)
+      if (e.evt.button === 1 || e.evt.button === 2 || (e.evt.button === 0 && isSpaceDown)) {
+        setIsPanning(true);
+        setPanStart({ x: e.evt.clientX - viewState.x, y: e.evt.clientY - viewState.y });
+        return;
+      }
+
+      // Only left click for drawing/selecting
+      if (e.evt.button !== 0) return;
 
       // Don't interfere with transformer interactions
       const target = e.target;
@@ -140,11 +206,20 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
       setDrawingRect({ x: imgPos.x, y: imgPos.y, width: 0, height: 0 });
       setIsDrawing(true);
     },
-    [loadedImage, store, stageToImage]
+    [loadedImage, store, stageToImage, viewState.x, viewState.y, isSpaceDown]
   );
 
   const handleMouseMove = useCallback(
     (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (isPanning && panStart) {
+        setViewState((prev) => ({
+          ...prev,
+          x: e.evt.clientX - panStart.x,
+          y: e.evt.clientY - panStart.y,
+        }));
+        return;
+      }
+
       const pointer = e.target.getStage()?.getPointerPosition();
       if (!pointer) return;
 
@@ -162,10 +237,16 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
         });
       }
     },
-    [isDrawing, drawStart, stageToImage]
+    [isDrawing, drawStart, stageToImage, isPanning, panStart]
   );
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
+    if (isPanning) {
+      setIsPanning(false);
+      setPanStart(null);
+      return;
+    }
+
     if (isDrawing && drawingRect) {
       // Only finalize if box is large enough (> 5px in image coords)
       if (drawingRect.width > 5 && drawingRect.height > 5) {
@@ -184,22 +265,24 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
     setIsDrawing(false);
     setDrawStart(null);
     setDrawingRect(null);
-  }, [isDrawing, drawingRect, store]);
+  }, [isDrawing, drawingRect, store, isPanning]);
 
   const handleMouseLeave = useCallback(() => {
     setCrosshairPos(null);
+    setIsPanning(false);
+    setPanStart(null);
   }, []);
 
   // ── Drag handler: constrain rect within image bounds ──
   const handleDragMove = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>) => {
       const node = e.target;
-      const newX = Math.max(0, Math.min(node.x(), imgW - node.width()));
-      const newY = Math.max(0, Math.min(node.y(), imgH - node.height()));
+      const newX = Math.max(0, Math.min(node.x(), imgDim.w - node.width()));
+      const newY = Math.max(0, Math.min(node.y(), imgDim.h - node.height()));
       node.x(newX);
       node.y(newY);
     },
-    [imgW, imgH]
+    [imgDim.w, imgDim.h]
   );
 
   const handleDragEnd = useCallback(
@@ -225,10 +308,10 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
       let newY = node.y();
 
       // Clamp to image
-      newX = Math.max(0, Math.min(newX, imgW - newW));
-      newY = Math.max(0, Math.min(newY, imgH - newH));
-      newW = Math.min(newW, imgW - newX);
-      newH = Math.min(newH, imgH - newY);
+      newX = Math.max(0, Math.min(newX, imgDim.w - newW));
+      newY = Math.max(0, Math.min(newY, imgDim.h - newH));
+      newW = Math.min(newW, imgDim.w - newX);
+      newH = Math.min(newH, imgDim.h - newY);
 
       store.updateAnnotation(annotationId, {
         x: newX,
@@ -237,11 +320,13 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
         height: newH,
       });
     },
-    [store, imgW, imgH]
+    [store, imgDim.w, imgDim.h]
   );
 
   // ── Is crosshair within image bounds? ──
   const showCrosshair =
+    !isPanning &&
+    !isSpaceDown &&
     crosshairPos &&
     crosshairPos.x >= imgBounds.left &&
     crosshairPos.x <= imgBounds.right &&
@@ -277,17 +362,19 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseLeave}
-      style={{ cursor: showCrosshair ? "none" : "default" }}
+      onWheel={handleWheel}
+      onContextMenu={(e) => e.evt.preventDefault()}
+      style={{ cursor: isPanning ? "grabbing" : isSpaceDown ? "grab" : showCrosshair ? "none" : "default" }}
     >
       <Layer>
         {/* Image + Annotations group (scaled & offset) */}
-        <Group x={offsetX} y={offsetY} scaleX={scale} scaleY={scale}>
+        <Group x={viewState.x} y={viewState.y} scaleX={viewState.scale} scaleY={viewState.scale}>
           {/* Background image */}
           {loadedImage && (
             <KonvaImage
               image={loadedImage}
-              width={imgW}
-              height={imgH}
+              width={imgDim.w}
+              height={imgDim.h}
               name="background-image"
             />
           )}
@@ -298,7 +385,7 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
               key={ann.id}
               annotation={ann}
               isSelected={ann.id === store.selectedAnnotationId}
-              scale={scale}
+              scale={viewState.scale}
               onDragMove={handleDragMove}
               onDragEnd={(e) => handleDragEnd(e, ann.id)}
               onTransformEnd={(e) => handleTransformEnd(e, ann.id)}
@@ -315,8 +402,8 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
               height={drawingRect.height}
               fill={store.activeClassLabel.color + "26"}
               stroke={store.activeClassLabel.color}
-              strokeWidth={2 / scale}
-              dash={[6 / scale, 4 / scale]}
+              strokeWidth={2 / viewState.scale}
+              dash={[6 / viewState.scale, 4 / viewState.scale]}
             />
           )}
 
@@ -326,10 +413,10 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
             flipEnabled={false}
             rotateEnabled={false}
             borderStroke="#fff"
-            borderStrokeWidth={1}
+            borderStrokeWidth={1 / viewState.scale}
             anchorFill="#fff"
             anchorStroke="#333"
-            anchorSize={8}
+            anchorSize={8 / viewState.scale}
             anchorCornerRadius={0}
             padding={0}
           />
@@ -358,7 +445,7 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
             <Label x={crosshairPos.x + 12} y={crosshairPos.y + 12} listening={false}>
               <Tag fill="rgba(0,0,0,0.75)" />
               <Text
-                text={`${Math.round(((crosshairPos.x - imgBounds.left) / scale))} , ${Math.round(((crosshairPos.y - imgBounds.top) / scale))}`}
+                text={`${Math.round(((crosshairPos.x - imgBounds.left) / viewState.scale))} , ${Math.round(((crosshairPos.y - imgBounds.top) / viewState.scale))}`}
                 fontSize={10}
                 fill="#fff"
                 fontFamily="monospace"
