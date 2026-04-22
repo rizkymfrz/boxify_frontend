@@ -260,7 +260,7 @@ function EditorContent() {
 
       {/* Main content area: left sidebar, canvas, right sidebar */}
       <div className="flex flex-1 overflow-hidden">
-        <LeftSidebar />
+        <LeftSidebar projectId={Number(projectId)} />
 
         {/* Center canvas area */}
         <div className="flex-1 overflow-hidden relative">

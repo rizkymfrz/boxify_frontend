@@ -1,15 +1,34 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import { Stage, Layer, Rect, Image as KonvaImage, Line, Transformer, Label, Tag, Text, Group } from "react-konva";
+import {
+  Stage,
+  Layer,
+  Rect,
+  Image as KonvaImage,
+  Line,
+  Transformer,
+  Label,
+  Tag,
+  Text,
+  Group,
+} from "react-konva";
 import type Konva from "konva";
-import { useAnnotationStore, useCurrentImage, useCurrentAnnotations } from "@/lib/store";
+import {
+  useAnnotationStore,
+  useCurrentImage,
+  useCurrentAnnotations,
+} from "@/lib/store";
 import type { Annotation } from "@/lib/types";
 
 // ── Custom useImage hook (no react-konva-utils dependency) ──
-function useImage(url: string): [HTMLImageElement | null, "loading" | "loaded" | "error"] {
+function useImage(
+  url: string,
+): [HTMLImageElement | null, "loading" | "loaded" | "error"] {
   const [image, setImage] = useState<HTMLImageElement | null>(null);
-  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">(
+    "loading",
+  );
 
   useEffect(() => {
     if (!url) {
@@ -42,7 +61,10 @@ interface CanvasCoreProps {
   containerHeight: number;
 }
 
-export default function CanvasCore({ containerWidth, containerHeight }: CanvasCoreProps) {
+export default function CanvasCore({
+  containerWidth,
+  containerHeight,
+}: CanvasCoreProps) {
   const store = useAnnotationStore();
   const currentImage = useCurrentImage();
   const annotations = useCurrentAnnotations();
@@ -61,7 +83,7 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
     const scaleX = containerWidth / w;
     const scaleY = containerHeight / h;
     const s = Math.min(scaleX, scaleY) * 0.95; // 5% padding
-    
+
     setViewState({
       scale: s,
       x: (containerWidth - w * s) / 2,
@@ -75,12 +97,24 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
 
   // ── Local drawing & panning state ──
   const [isDrawing, setIsDrawing] = useState(false);
-  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(null);
-  const [drawingRect, setDrawingRect] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
-  const [crosshairPos, setCrosshairPos] = useState<{ x: number; y: number } | null>(null);
-  
+  const [drawStart, setDrawStart] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const [drawingRect, setDrawingRect] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
+  const [crosshairPos, setCrosshairPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
   const [isPanning, setIsPanning] = useState(false);
-  const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(null);
+  const [panStart, setPanStart] = useState<{ x: number; y: number } | null>(
+    null,
+  );
   const [isSpaceDown, setIsSpaceDown] = useState(false);
 
   useEffect(() => {
@@ -112,10 +146,16 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
   // ── Coordinate conversion: stage → image ──
   const stageToImage = useCallback(
     (stageX: number, stageY: number) => ({
-      x: Math.max(0, Math.min((stageX - viewState.x) / viewState.scale, imgDim.w)),
-      y: Math.max(0, Math.min((stageY - viewState.y) / viewState.scale, imgDim.h)),
+      x: Math.max(
+        0,
+        Math.min((stageX - viewState.x) / viewState.scale, imgDim.w),
+      ),
+      y: Math.max(
+        0,
+        Math.min((stageY - viewState.y) / viewState.scale, imgDim.h),
+      ),
     }),
-    [viewState.x, viewState.y, viewState.scale, imgDim.w, imgDim.h]
+    [viewState.x, viewState.y, viewState.scale, imgDim.w, imgDim.h],
   );
 
   // ── Image boundaries in stage coords (for crosshair clipping) ──
@@ -126,7 +166,7 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
       right: viewState.x + imgDim.w * viewState.scale,
       bottom: viewState.y + imgDim.h * viewState.scale,
     }),
-    [viewState.x, viewState.y, viewState.scale, imgDim.w, imgDim.h]
+    [viewState.x, viewState.y, viewState.scale, imgDim.w, imgDim.h],
   );
 
   // ── Attach transformer to selected node ──
@@ -156,29 +196,35 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
   }, [store.currentImageIndex]);
 
   // ── Wheel Zoom Handler ──
-  const handleWheel = useCallback((e: Konva.KonvaEventObject<WheelEvent>) => {
-    e.evt.preventDefault();
-    const scaleBy = 1.1;
-    const stage = stageRef.current;
-    if (!stage) return;
-    
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
+  const handleWheel = useCallback(
+    (e: Konva.KonvaEventObject<WheelEvent>) => {
+      e.evt.preventDefault();
+      const scaleBy = 1.1;
+      const stage = stageRef.current;
+      if (!stage) return;
 
-    const oldScale = viewState.scale;
-    const mousePointTo = {
-      x: (pointer.x - viewState.x) / oldScale,
-      y: (pointer.y - viewState.y) / oldScale,
-    };
+      const pointer = stage.getPointerPosition();
+      if (!pointer) return;
 
-    const newScale = e.evt.deltaY > 0 ? Math.max(oldScale / scaleBy, 0.1) : Math.min(oldScale * scaleBy, 10);
+      const oldScale = viewState.scale;
+      const mousePointTo = {
+        x: (pointer.x - viewState.x) / oldScale,
+        y: (pointer.y - viewState.y) / oldScale,
+      };
 
-    setViewState({
-      scale: newScale,
-      x: pointer.x - mousePointTo.x * newScale,
-      y: pointer.y - mousePointTo.y * newScale,
-    });
-  }, [viewState]);
+      const newScale =
+        e.evt.deltaY > 0
+          ? Math.max(oldScale / scaleBy, 0.1)
+          : Math.min(oldScale * scaleBy, 10);
+
+      setViewState({
+        scale: newScale,
+        x: pointer.x - mousePointTo.x * newScale,
+        y: pointer.y - mousePointTo.y * newScale,
+      });
+    },
+    [viewState],
+  );
 
   // ── Mouse handlers ──
   const handleMouseDown = useCallback(
@@ -186,9 +232,16 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
       if (!loadedImage) return;
 
       // Handle panning (middle or right click, or space + left click)
-      if (e.evt.button === 1 || e.evt.button === 2 || (e.evt.button === 0 && isSpaceDown)) {
+      if (
+        e.evt.button === 1 ||
+        e.evt.button === 2 ||
+        (e.evt.button === 0 && isSpaceDown)
+      ) {
         setIsPanning(true);
-        setPanStart({ x: e.evt.clientX - viewState.x, y: e.evt.clientY - viewState.y });
+        setPanStart({
+          x: e.evt.clientX - viewState.x,
+          y: e.evt.clientY - viewState.y,
+        });
         return;
       }
 
@@ -198,16 +251,23 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
       // Don't interfere with transformer interactions
       const target = e.target;
       const parent = target.getParent();
-      if (parent && parent.className === "Transformer") return;
+      if (
+        !store.isForceCreateMode &&
+        parent &&
+        parent.className === "Transformer"
+      )
+        return;
 
       // Clicked on an annotation rect → select it
-      if (target.name() === "annotation-rect") {
+      if (!store.isForceCreateMode && target.name() === "annotation-rect") {
         store.setSelectedAnnotation(target.id());
         return;
       }
 
-      // Clicked on empty space → deselect and start drawing
+      // Clicked on empty space (or anywhere if Force Create) → deselect and start drawing (only if a class is active)
       store.setSelectedAnnotation(null);
+      if (!store.activeClassLabel.name) return; // no class → drawing disabled
+
       const pointer = e.target.getStage()?.getPointerPosition();
       if (!pointer) return;
       const imgPos = stageToImage(pointer.x, pointer.y);
@@ -215,7 +275,7 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
       setDrawingRect({ x: imgPos.x, y: imgPos.y, width: 0, height: 0 });
       setIsDrawing(true);
     },
-    [loadedImage, store, stageToImage, viewState.x, viewState.y, isSpaceDown]
+    [loadedImage, store, stageToImage, viewState.x, viewState.y, isSpaceDown],
   );
 
   const handleMouseMove = useCallback(
@@ -246,35 +306,38 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
         });
       }
     },
-    [isDrawing, drawStart, stageToImage, isPanning, panStart]
+    [isDrawing, drawStart, stageToImage, isPanning, panStart],
   );
 
-  const handleMouseUp = useCallback((e: Konva.KonvaEventObject<MouseEvent>) => {
-    if (isPanning) {
-      setIsPanning(false);
-      setPanStart(null);
-      return;
-    }
-
-    if (isDrawing && drawingRect) {
-      // Only finalize if box is large enough (> 5px in image coords)
-      if (drawingRect.width > 5 && drawingRect.height > 5) {
-        const newAnnotation: Annotation = {
-          id: crypto.randomUUID(),
-          x: drawingRect.x,
-          y: drawingRect.y,
-          width: drawingRect.width,
-          height: drawingRect.height,
-          label: store.activeClassLabel.name,
-          color: store.activeClassLabel.color,
-        };
-        store.addAnnotation(newAnnotation);
+  const handleMouseUp = useCallback(
+    (e: Konva.KonvaEventObject<MouseEvent>) => {
+      if (isPanning) {
+        setIsPanning(false);
+        setPanStart(null);
+        return;
       }
-    }
-    setIsDrawing(false);
-    setDrawStart(null);
-    setDrawingRect(null);
-  }, [isDrawing, drawingRect, store, isPanning]);
+
+      if (isDrawing && drawingRect) {
+        // Only finalize if box is large enough (> 5px in image coords)
+        if (drawingRect.width > 5 && drawingRect.height > 5) {
+          const newAnnotation: Annotation = {
+            id: crypto.randomUUID(),
+            x: drawingRect.x,
+            y: drawingRect.y,
+            width: drawingRect.width,
+            height: drawingRect.height,
+            label: store.activeClassLabel.name,
+            color: store.activeClassLabel.color,
+          };
+          store.addAnnotation(newAnnotation);
+        }
+      }
+      setIsDrawing(false);
+      setDrawStart(null);
+      setDrawingRect(null);
+    },
+    [isDrawing, drawingRect, store, isPanning],
+  );
 
   const handleMouseLeave = useCallback(() => {
     setCrosshairPos(null);
@@ -291,7 +354,7 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
       node.x(newX);
       node.y(newY);
     },
-    [imgDim.w, imgDim.h]
+    [imgDim.w, imgDim.h],
   );
 
   const handleDragEnd = useCallback(
@@ -299,7 +362,7 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
       const node = e.target;
       store.updateAnnotation(annotationId, { x: node.x(), y: node.y() });
     },
-    [store]
+    [store],
   );
 
   // ── Transform end: apply scale to width/height ──
@@ -329,7 +392,7 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
         height: newH,
       });
     },
-    [store, imgDim.w, imgDim.h]
+    [store, imgDim.w, imgDim.h],
   );
 
   // ── Is crosshair within image bounds? ──
@@ -373,11 +436,24 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
       onMouseLeave={handleMouseLeave}
       onWheel={handleWheel}
       onContextMenu={(e) => e.evt.preventDefault()}
-      style={{ cursor: isPanning ? "grabbing" : isSpaceDown ? "grab" : showCrosshair ? "none" : "default" }}
+      style={{
+        cursor: isPanning
+          ? "grabbing"
+          : isSpaceDown
+            ? "grab"
+            : showCrosshair
+              ? "none"
+              : "default",
+      }}
     >
       <Layer>
         {/* Image + Annotations group (scaled & offset) */}
-        <Group x={viewState.x} y={viewState.y} scaleX={viewState.scale} scaleY={viewState.scale}>
+        <Group
+          x={viewState.x}
+          y={viewState.y}
+          scaleX={viewState.scale}
+          scaleY={viewState.scale}
+        >
           {/* Background image */}
           {loadedImage && (
             <KonvaImage
@@ -397,6 +473,7 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
                 annotation={ann}
                 isSelected={ann.id === store.selectedAnnotationId}
                 scale={viewState.scale}
+                showLabels={store.showLabels}
                 onDragMove={handleDragMove}
                 onDragEnd={(e) => handleDragEnd(e, ann.id)}
                 onTransformEnd={(e) => handleTransformEnd(e, ann.id)}
@@ -405,19 +482,22 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
             ))}
 
           {/* Drawing-in-progress rect */}
-          {isDrawing && drawingRect && drawingRect.width > 0 && drawingRect.height > 0 && (
-            <Rect
-              x={drawingRect.x}
-              y={drawingRect.y}
-              width={drawingRect.width}
-              height={drawingRect.height}
-              fill={store.activeClassLabel.color + "26"}
-              stroke={store.activeClassLabel.color}
-              strokeWidth={2}
-              strokeScaleEnabled={false}
-              dash={[6 / viewState.scale, 4 / viewState.scale]}
-            />
-          )}
+          {isDrawing &&
+            drawingRect &&
+            drawingRect.width > 0 &&
+            drawingRect.height > 0 && (
+              <Rect
+                x={drawingRect.x}
+                y={drawingRect.y}
+                width={drawingRect.width}
+                height={drawingRect.height}
+                fill={store.activeClassLabel.color + "26"}
+                stroke={store.activeClassLabel.color}
+                strokeWidth={2}
+                strokeScaleEnabled={false}
+                dash={[6 / viewState.scale, 4 / viewState.scale]}
+              />
+            )}
 
           {/* Transformer */}
           <Transformer
@@ -439,7 +519,12 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
           <>
             {/* Vertical line */}
             <Line
-              points={[crosshairPos.x, imgBounds.top, crosshairPos.x, imgBounds.bottom]}
+              points={[
+                crosshairPos.x,
+                imgBounds.top,
+                crosshairPos.x,
+                imgBounds.bottom,
+              ]}
               stroke="rgba(255,255,255,0.6)"
               strokeWidth={1}
               dash={[4, 4]}
@@ -447,17 +532,26 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
             />
             {/* Horizontal line */}
             <Line
-              points={[imgBounds.left, crosshairPos.y, imgBounds.right, crosshairPos.y]}
+              points={[
+                imgBounds.left,
+                crosshairPos.y,
+                imgBounds.right,
+                crosshairPos.y,
+              ]}
               stroke="rgba(255,255,255,0.6)"
               strokeWidth={1}
               dash={[4, 4]}
               listening={false}
             />
             {/* Coordinate label */}
-            <Label x={crosshairPos.x + 12} y={crosshairPos.y + 12} listening={false}>
+            <Label
+              x={crosshairPos.x + 12}
+              y={crosshairPos.y + 12}
+              listening={false}
+            >
               <Tag fill="rgba(0,0,0,0.75)" />
               <Text
-                text={`${Math.round(((crosshairPos.x - imgBounds.left) / viewState.scale))} , ${Math.round(((crosshairPos.y - imgBounds.top) / viewState.scale))}`}
+                text={`${Math.round((crosshairPos.x - imgBounds.left) / viewState.scale)} , ${Math.round((crosshairPos.y - imgBounds.top) / viewState.scale)}`}
                 fontSize={10}
                 fill="#fff"
                 fontFamily="monospace"
@@ -476,6 +570,7 @@ interface AnnotationRectProps {
   annotation: Annotation;
   isSelected: boolean;
   scale: number;
+  showLabels: boolean;
   onDragMove: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
   onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
@@ -486,6 +581,7 @@ function AnnotationRect({
   annotation: ann,
   isSelected,
   scale,
+  showLabels,
   onDragMove,
   onDragEnd,
   onTransformEnd,
@@ -497,16 +593,22 @@ function AnnotationRect({
   return (
     <>
       {/* Label background + text */}
-      <Label x={ann.x} y={ann.y - (labelFontSize + labelPadding * 2 + 2 / scale)} listening={false}>
-        <Tag fill={ann.color} />
-        <Text
-          text={ann.label}
-          fontSize={labelFontSize}
-          fill="#fff"
-          fontFamily="monospace"
-          padding={labelPadding}
-        />
-      </Label>
+      {showLabels && (
+        <Label
+          x={ann.x}
+          y={ann.y - (labelFontSize + labelPadding * 2 + 2 / scale)}
+          listening={false}
+        >
+          <Tag fill={ann.color} />
+          <Text
+            text={ann.label}
+            fontSize={labelFontSize}
+            fill="#000"
+            fontFamily="monospace"
+            padding={labelPadding}
+          />
+        </Label>
+      )}
 
       {/* Box rect */}
       <Rect

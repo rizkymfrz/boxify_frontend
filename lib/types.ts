@@ -110,3 +110,21 @@ export interface ProjectCreateResponse {
   image_count: number;
   created_at: string;
 }
+
+export interface ProjectClass {
+  id: number;
+  project_id: number;
+  name: string;
+  color: string;
+  created_at: string;
+}
+
+export interface ProjectClassCreate {
+  name: string;
+  color?: string;
+}
+
+export interface ProjectClassUpdate {
+  name?: string;
+  color?: string;
+}

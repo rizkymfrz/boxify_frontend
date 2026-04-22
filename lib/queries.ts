@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useCallback, useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { getImages, saveAnnotations, exportDataset, getAnnotations, API_BASE } from "./api";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getImages, saveAnnotations, exportDataset, getAnnotations, deleteImage, uploadModel, getModels, autoLabelImage, API_BASE } from "./api";
 import { useAnnotationStore } from "./store";
 import type { ImageItem, AnnotationRequest } from "./types";
 
@@ -172,6 +172,66 @@ export function useExportDataset(projectId: string) {
       a.click();
       a.remove();
       window.URL.revokeObjectURL(url);
+    },
+  });
+}
+
+// ── Mutation: delete an image ──
+
+export function useDeleteImageMutation(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (filename: string) => {
+      return deleteImage(projectId, filename);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["images", projectId] });
+    },
+  });
+}
+
+// ── Mutation: upload model ──
+
+export function useUploadModelMutation(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (formData: FormData) => {
+      return uploadModel(projectId, formData);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["models", projectId] });
+    },
+  });
+}
+
+// ── Query: list saved models ──
+
+export function useGetModelsQuery(projectId: string) {
+  return useQuery({
+    queryKey: ["models", projectId],
+    queryFn: () => getModels(projectId),
+    enabled: !!projectId,
+    staleTime: 60 * 1000, // 1 min
+  });
+}
+
+// ── Mutation: auto label image ──
+
+export function useAutoLabelMutation(projectId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ filename, modelName }: { filename: string; modelName: string }) => {
+      return autoLabelImage(projectId, filename, { model_name: modelName });
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate annotations for the current image
+      queryClient.invalidateQueries({ queryKey: ["annotations", projectId, variables.filename] });
+      // Cast to Number: useClassesQuery stores the key as a number, but projectId here is a string.
+      // Mismatched types would cause the invalidation to miss the correct cache entry.
+      queryClient.invalidateQueries({ queryKey: ["classes", Number(projectId)] });
     },
   });
 }

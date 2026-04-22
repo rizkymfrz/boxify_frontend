@@ -1,9 +1,11 @@
 "use client";
 
+import { useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAnnotationStore, useCurrentAnnotations } from "@/lib/store";
-import { useExportDataset, useManualSave } from "@/lib/queries";
+import { useExportDataset, useManualSave, useAutoLabelMutation } from "@/lib/queries";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -28,6 +30,10 @@ import {
   IconCheck,
   IconArrowLeft,
   IconKeyboard,
+  IconEye,
+  IconEyeOff,
+  IconRepeat,
+  IconSquarePlus,
 } from "@tabler/icons-react";
 
 interface TopToolbarProps {
@@ -46,6 +52,8 @@ export default function TopToolbar({
   const images = store.images;
   const annotations = useCurrentAnnotations();
   const exportMutation = useExportDataset(projectId);
+  const autoLabelMutation = useAutoLabelMutation(projectId);
+  const activeModelName = store.activeModelName;
   const {
     handleManualSave,
     isSaving: isManualSaving,
@@ -74,6 +82,67 @@ export default function TopToolbar({
   const handleClearAll = () => {
     store.clearAnnotations();
   };
+
+  const handleAutoLabel = async () => {
+    if (!activeModelName || isSaving || autoLabelMutation.isPending) return;
+    const currentImage = images[currentImageIndex];
+    if (!currentImage) return;
+
+    try {
+      const response = await autoLabelMutation.mutateAsync({
+        filename: currentImage.name,
+        modelName: activeModelName,
+      });
+      toast.success(response.message);
+    } catch (error) {
+      toast.error("Auto-labeling failed");
+    }
+  };
+
+  const handleRepeatPrevious = useCallback(() => {
+    if (isFirst || isSaving) {
+      if (isFirst) toast.error("This is the first image");
+      return;
+    }
+    const prevImage = images[currentImageIndex - 1];
+    if (!prevImage) return;
+
+    const prevAnnotations = store.annotations[prevImage.id] || [];
+    if (prevAnnotations.length === 0) {
+      toast.info("Previous image has no annotations");
+      return;
+    }
+
+    const newAnnotations = prevAnnotations.map(ann => ({
+      ...ann,
+      id: crypto.randomUUID()
+    }));
+
+    const currentImageId = images[currentImageIndex].id;
+    const existingAnnotations = store.annotations[currentImageId] || [];
+    store.setAnnotations(currentImageId, [...existingAnnotations, ...newAnnotations]);
+    toast.success("Annotations copied from previous image");
+  }, [isFirst, isSaving, currentImageIndex, images, store]);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      if (e.key.toLowerCase() === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        handleRepeatPrevious();
+      }
+
+      if (e.key.toLowerCase() === "f" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        store.toggleForceCreateMode();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleRepeatPrevious, store]);
 
   return (
     <div className="h-14 flex items-center justify-between border-b border-border bg-card px-4 shrink-0">
@@ -261,9 +330,94 @@ export default function TopToolbar({
                   Scroll Wheel
                 </kbd>
               </div>
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm">Repeat Previous</span>
+                <kbd className="px-2 py-1 bg-muted rounded text-[10px] font-mono font-semibold border border-border">
+                  R
+                </kbd>
+              </div>
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm">Force Draw Mode</span>
+                <kbd className="px-2 py-1 bg-muted rounded text-[10px] font-mono font-semibold border border-border">
+                  F
+                </kbd>
+              </div>
             </div>
           </DialogContent>
         </Dialog>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              id="btn-auto-detect"
+              variant="outline"
+              size="sm"
+              onClick={handleAutoLabel}
+              disabled={!activeModelName || autoLabelMutation.isPending || isSaving}
+              className="gap-1.5 border-purple-500/30 text-purple-600 hover:bg-purple-500/10 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"
+            >
+              {autoLabelMutation.isPending ? (
+                <IconLoader2 className="size-3.5 animate-spin" />
+              ) : (
+                <span className="text-base leading-none">🪄</span>
+              )}
+              <span className="hidden sm:inline">Auto-Detect</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {!activeModelName ? "Upload a model first to enable AI Auto-Detect" : "Run AI auto-labeling on this image"}
+          </TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              id="btn-force-draw"
+              variant={store.isForceCreateMode ? "secondary" : "outline"}
+              size="sm"
+              onClick={store.toggleForceCreateMode}
+              className={cn("gap-1.5", store.isForceCreateMode && "border-primary text-primary")}
+            >
+              <IconSquarePlus className="size-3.5" />
+              <span className="hidden sm:inline">Force Draw</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Force draw new box (F)</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              id="btn-repeat-previous"
+              variant="outline"
+              size="sm"
+              onClick={handleRepeatPrevious}
+              disabled={isFirst || isSaving}
+              className="gap-1.5"
+            >
+              <IconRepeat className="size-3.5" />
+              <span className="hidden sm:inline">Repeat</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Copy annotations from previous image (R)</TooltipContent>
+        </Tooltip>
+
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              id="btn-toggle-labels"
+              variant="outline"
+              size="sm"
+              onClick={store.toggleLabels}
+              disabled={isSaving}
+              className="gap-1.5"
+            >
+              {store.showLabels ? <IconEye className="size-3.5" /> : <IconEyeOff className="size-3.5" />}
+              <span className="hidden sm:inline">Labels</span>
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{store.showLabels ? "Hide Labels" : "Show Labels"}</TooltipContent>
+        </Tooltip>
 
         <Tooltip>
           <TooltipTrigger asChild>

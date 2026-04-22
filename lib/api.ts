@@ -120,3 +120,49 @@ export async function exportDataset(projectId: string): Promise<Blob> {
   });
   return data;
 }
+
+/** DELETE /api/projects/{projectId}/images/{filename} → delete an image */
+export async function deleteImage(
+  projectId: string,
+  filename: string
+): Promise<{ message: string }> {
+  const { data } = await apiClient.delete<{ message: string }>(
+    `/projects/${projectId}/images/${encodeURIComponent(filename)}`
+  );
+  return data;
+}
+
+/** POST /api/projects/{projectId}/models → upload a model */
+export async function uploadModel(
+  projectId: string,
+  formData: FormData
+): Promise<{ message: string; model_name: string }> {
+  const { data } = await apiClient.post<{ message: string; model_name: string }>(
+    `/projects/${projectId}/models`,
+    formData
+  );
+  return data;
+}
+
+/** GET /api/projects/{projectId}/models → list saved models */
+export async function getModels(
+  projectId: string
+): Promise<{ id: number; name: string; uploaded_at: string }[]> {
+  const { data } = await apiClient.get<{
+    models: { id: number; name: string; uploaded_at: string }[];
+  }>(`/projects/${projectId}/models`);
+  return data.models;
+}
+
+/** POST /api/projects/{projectId}/images/{filename}/auto-label → auto label image */
+export async function autoLabelImage(
+  projectId: string,
+  filename: string,
+  payload: { model_name: string }
+): Promise<{ message: string; boxes_added: number; classes_created: number }> {
+  const { data } = await apiClient.post<{ message: string; boxes_added: number; classes_created: number }>(
+    `/projects/${projectId}/images/${encodeURIComponent(filename)}/auto-label`,
+    payload
+  );
+  return data;
+}

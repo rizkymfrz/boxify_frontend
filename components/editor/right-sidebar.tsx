@@ -1,14 +1,36 @@
 "use client";
 
-import { useAnnotationStore, useCurrentImage, useCurrentAnnotations } from "@/lib/store";
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useDeleteImageMutation } from "@/lib/queries";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
+  useAnnotationStore,
+  useCurrentImage,
+  useCurrentAnnotations,
+} from "@/lib/store";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import {
   IconFileInfo,
   IconPhoto,
   IconStack2,
+  IconTrash,
 } from "@tabler/icons-react";
 
 interface RightSidebarProps {
@@ -16,16 +38,38 @@ interface RightSidebarProps {
   isSaving: boolean;
 }
 
-export default function RightSidebar({ saveAndGo, isSaving }: RightSidebarProps) {
+export default function RightSidebar({
+  saveAndGo,
+  isSaving,
+}: RightSidebarProps) {
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get("projectId") || "";
+  const deleteImageMutation = useDeleteImageMutation(projectId);
+  const removeImage = useAnnotationStore((s) => s.removeImage);
+
   const images = useAnnotationStore((s) => s.images);
   const currentImageIndex = useAnnotationStore((s) => s.currentImageIndex);
   const annotations = useAnnotationStore((s) => s.annotations);
   const currentImage = useCurrentImage();
   const currentAnnotations = useCurrentAnnotations();
+  const [searchQuery, setSearchQuery] = useState("");
 
   const handleImageClick = (index: number) => {
     if (index === currentImageIndex || isSaving) return;
     saveAndGo(index);
+  };
+
+  const handleDeleteImage = async (filename: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isSaving || deleteImageMutation.isPending) return;
+
+    try {
+      await deleteImageMutation.mutateAsync(filename);
+      removeImage(filename);
+      toast.success("Image deleted");
+    } catch (error) {
+      toast.error("Failed to delete image");
+    }
   };
 
   return (
@@ -74,56 +118,112 @@ export default function RightSidebar({ saveAndGo, isSaving }: RightSidebarProps)
         <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
           Image Batch
         </span>
-        <Badge variant="outline" className="ml-auto text-[10px] h-4 tabular-nums">
+        <Badge
+          variant="outline"
+          className="ml-auto text-[10px] h-4 tabular-nums"
+        >
           {images.length}
         </Badge>
       </div>
       <Separator />
 
+      <div className="px-4 py-2 border-b border-border">
+        <Input
+          placeholder="Search image..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="h-8 text-xs"
+        />
+      </div>
+
       <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 space-y-0.5">
-          {images.map((image, index) => {
-            const isCurrent = index === currentImageIndex;
-            const imageAnnotations = annotations[image.id] || [];
-            return (
-              <button
-                key={image.id}
-                id={`image-item-${image.id}`}
-                onClick={() => handleImageClick(index)}
-                disabled={isSaving}
-                className={cn(
-                  "w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors",
-                  "hover:bg-accent/50 disabled:opacity-50",
-                  isCurrent && "bg-accent text-accent-foreground"
-                )}
-              >
-                <IconPhoto
-                  className={cn(
-                    "size-3.5 shrink-0",
-                    isCurrent ? "text-primary" : "text-muted-foreground"
-                  )}
-                />
-                <div className="flex-1 min-w-0">
-                  <p
+          {images
+            .map((img, idx) => ({ img, idx }))
+            .filter(({ img }) =>
+              img.name.toLowerCase().includes(searchQuery.toLowerCase()),
+            )
+            .map(({ img: image, idx: index }) => {
+              const isCurrent = index === currentImageIndex;
+              const imageAnnotations = annotations[image.id] || [];
+              return (
+                <div key={image.id} className="flex group w-full items-center">
+                  <button
+                    id={`image-item-${image.id}`}
+                    onClick={() => handleImageClick(index)}
+                    disabled={isSaving}
                     className={cn(
-                      "text-xs truncate",
-                      isCurrent ? "font-medium text-foreground" : "text-muted-foreground"
+                      "flex-1 flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors rounded-md",
+                      "hover:bg-accent/50 disabled:opacity-50",
+                      isCurrent && "bg-accent text-accent-foreground",
                     )}
                   >
-                    {image.name}
-                  </p>
+                    <IconPhoto
+                      className={cn(
+                        "size-3.5 shrink-0",
+                        isCurrent ? "text-primary" : "text-muted-foreground",
+                      )}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={cn(
+                          "text-xs truncate",
+                          isCurrent
+                            ? "font-medium text-foreground"
+                            : "text-muted-foreground",
+                        )}
+                      >
+                        {image.name}
+                      </p>
+                    </div>
+                    {imageAnnotations.length > 0 && (
+                      <Badge
+                        variant="secondary"
+                        className="text-[10px] h-4 px-1.5 tabular-nums shrink-0"
+                      >
+                        {imageAnnotations.length}
+                      </Badge>
+                    )}
+                  </button>
+
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="size-7 shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        disabled={isSaving || deleteImageMutation.isPending}
+                      >
+                        <IconTrash className="size-3.5" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Image</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete this image and its
+                          annotations? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={(e) =>
+                            handleDeleteImage(
+                              image.name,
+                              e as unknown as React.MouseEvent,
+                            )
+                          }
+                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
-                {imageAnnotations.length > 0 && (
-                  <Badge
-                    variant="secondary"
-                    className="text-[10px] h-4 px-1.5 tabular-nums shrink-0"
-                  >
-                    {imageAnnotations.length}
-                  </Badge>
-                )}
-              </button>
-            );
-          })}
+              );
+            })}
         </div>
       </ScrollArea>
     </div>

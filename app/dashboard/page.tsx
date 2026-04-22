@@ -9,6 +9,7 @@ import { useAuthStore } from "@/lib/authStore";
 import { useProjectsQuery } from "@/lib/projectQueries";
 import type { ProjectListItem } from "@/lib/types";
 import CreateProjectDialog from "@/components/dashboard/create-project-dialog";
+import ClassManagerDialog from "@/components/dashboard/class-manager-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import {
   IconPlus,
@@ -27,9 +33,16 @@ import {
   IconCheck,
   IconLogout,
   IconPhotoOff,
+  IconSettings,
 } from "@tabler/icons-react";
 
-function ProjectCard({ project }: { project: ProjectListItem }) {
+function ProjectCard({
+  project,
+  onManageClasses,
+}: {
+  project: ProjectListItem;
+  onManageClasses: (id: number) => void;
+}) {
   const progress =
     project.image_count > 0
       ? Math.round((project.annotated_count / project.image_count) * 100)
@@ -37,29 +50,53 @@ function ProjectCard({ project }: { project: ProjectListItem }) {
 
   return (
     <Link href={`/editor?projectId=${project.id}`} className="group block">
-      <Card className="h-full transition-all duration-200 hover:border-primary/50 hover:shadow-lg hover:shadow-black/10 hover:-translate-y-0.5">
-        <CardHeader className="pb-4">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="size-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+      <Card className="h-full">
+        <CardHeader className="pb-4 min-w-0">
+          <div className="flex items-start justify-between gap-2 w-full min-w-0">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <div className="size-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0 border border-primary">
                 <IconFolder className="size-4 text-primary" />
               </div>
-              <CardTitle className="text-sm font-semibold truncate group-hover:text-primary transition-colors">
-                {project.name}
-              </CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <CardTitle className="text-sm font-semibold truncate group-hover:text-primary transition-colors cursor-default">
+                    {project.name}
+                  </CardTitle>
+                </TooltipTrigger>
+                <TooltipContent
+                  side="top"
+                  className="max-w-[300px] break-words"
+                >
+                  {project.name}
+                </TooltipContent>
+              </Tooltip>
             </div>
-            <Badge
-              variant="outline"
-              className="text-[10px] shrink-0 tabular-nums"
-            >
-              #{project.id}
-            </Badge>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-7 text-muted-foreground hover:text-foreground shrink-0 z-10 relative"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onManageClasses(project.id);
+                }}
+              >
+                <IconSettings className="size-4" />
+              </Button>
+              <Badge
+                variant="outline"
+                className="text-[10px] shrink-0 tabular-nums"
+              >
+                #{project.id}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent className="pb-4 space-y-4">
+        <CardContent className="space-y-4">
           {/* Stats row */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <div className="flex items-center gap-1.5 text-muted-foreground">
               <IconPhoto className="size-3.5" />
               <span className="text-xs tabular-nums">
@@ -100,6 +137,9 @@ function ProjectCard({ project }: { project: ProjectListItem }) {
 
 export default function DashboardPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [managingClassProjectId, setManagingClassProjectId] = useState<
+    number | null
+  >(null);
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
@@ -291,7 +331,11 @@ export default function DashboardPage() {
         {!isPending && projects.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {projects.map((project) => (
-              <ProjectCard key={project.id} project={project} />
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onManageClasses={(id) => setManagingClassProjectId(id)}
+              />
             ))}
           </div>
         )}
@@ -299,6 +343,17 @@ export default function DashboardPage() {
 
       {/* Create Project Dialog */}
       <CreateProjectDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+
+      {/* Class Manager Dialog */}
+      {managingClassProjectId !== null && (
+        <ClassManagerDialog
+          projectId={managingClassProjectId}
+          open={managingClassProjectId !== null}
+          onOpenChange={(open) => {
+            if (!open) setManagingClassProjectId(null);
+          }}
+        />
+      )}
     </div>
   );
 }

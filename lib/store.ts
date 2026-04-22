@@ -3,7 +3,6 @@ import {
   type Annotation,
   type ImageItem,
   type ClassLabel,
-  CLASS_LABELS,
 } from "./types";
 
 interface AnnotationState {
@@ -15,9 +14,13 @@ interface AnnotationState {
   activeClassLabel: ClassLabel;
   classLabels: ClassLabel[];
   hiddenClasses: string[];
+  showLabels: boolean;
+  isForceCreateMode: boolean;
+  activeModelName: string | null;
 
   // Actions
   setImages: (images: ImageItem[]) => void;
+  removeImage: (imageId: string) => void;
   setCurrentImageDimensions: (width: number, height: number) => void;
   nextImage: () => void;
   prevImage: () => void;
@@ -29,8 +32,13 @@ interface AnnotationState {
   clearAnnotations: () => void;
   setSelectedAnnotation: (id: string | null) => void;
   setActiveClassLabel: (label: ClassLabel) => void;
+  setClassLabels: (labels: ClassLabel[]) => void;
+  purgeClass: (className: string) => void;
   deleteSelectedAnnotation: () => void;
   toggleVisibility: (className: string) => void;
+  toggleLabels: () => void;
+  toggleForceCreateMode: () => void;
+  setActiveModelName: (name: string | null) => void;
 }
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
@@ -38,12 +46,43 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   currentImageIndex: 0,
   annotations: {},
   selectedAnnotationId: null,
-  activeClassLabel: CLASS_LABELS[0],
-  classLabels: CLASS_LABELS,
+  activeClassLabel: { name: "", color: "#ef4444", shortcut: "" },
+  classLabels: [],
   hiddenClasses: [],
+  showLabels: true,
+  isForceCreateMode: false,
+  activeModelName: null,
 
   setImages: (images: ImageItem[]) => {
-    set({ images, currentImageIndex: 0, selectedAnnotationId: null });
+    const { currentImageIndex, images: currentImages } = get();
+    if (currentImages.length === 0) {
+      set({ images, currentImageIndex: 0, selectedAnnotationId: null });
+    } else {
+      const nextIndex = Math.min(currentImageIndex, Math.max(0, images.length - 1));
+      set({ images, currentImageIndex: nextIndex });
+    }
+  },
+
+  removeImage: (imageId: string) => {
+    const { images, currentImageIndex } = get();
+    const indexToRemove = images.findIndex((img) => img.id === imageId);
+    if (indexToRemove === -1) return;
+
+    const newImages = images.filter((_, i) => i !== indexToRemove);
+    if (newImages.length === 0) {
+      set({ images: [], currentImageIndex: 0, selectedAnnotationId: null });
+      return;
+    }
+
+    let newIndex = currentImageIndex;
+    if (indexToRemove === currentImageIndex) {
+      newIndex = Math.min(currentImageIndex, newImages.length - 1);
+      set({ selectedAnnotationId: null });
+    } else if (indexToRemove < currentImageIndex) {
+      newIndex = currentImageIndex - 1;
+    }
+
+    set({ images: newImages, currentImageIndex: newIndex });
   },
 
   setCurrentImageDimensions: (width: number, height: number) => {
@@ -169,6 +208,52 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     }
   },
 
+  setClassLabels: (labels: ClassLabel[]) => {
+    const { activeClassLabel } = get();
+    // Check if current active label still exists in new list
+    const stillExists = labels.some((l) => l.name === activeClassLabel.name);
+    set({
+      classLabels: labels,
+      // If active label gone or blank, default to first in new list
+      activeClassLabel: stillExists
+        ? activeClassLabel
+        : labels[0] ?? { name: "", color: "#ef4444", shortcut: "" },
+    });
+  },
+
+  purgeClass: (className: string) => {
+    const { annotations, activeClassLabel, classLabels, selectedAnnotationId } = get();
+    const newAnnotations: Record<string, Annotation[]> = {};
+    for (const [imgId, anns] of Object.entries(annotations)) {
+      newAnnotations[imgId] = anns.filter((a) => a.label !== className);
+    }
+    
+    // Also reset selectedAnnotationId if the selected annotation was purged
+    let newSelectedId = selectedAnnotationId;
+    if (selectedAnnotationId) {
+      const stillExists = Object.values(newAnnotations).some(anns => 
+        anns.some(a => a.id === selectedAnnotationId)
+      );
+      if (!stillExists) newSelectedId = null;
+    }
+
+    set({ 
+      annotations: newAnnotations,
+      selectedAnnotationId: newSelectedId 
+    });
+
+    // If the purged class was active, reset to the first available class
+    if (activeClassLabel.name === className) {
+      const remainingClasses = classLabels.filter((c) => c.name !== className);
+      set({
+        activeClassLabel: remainingClasses[0] ?? { name: "", color: "#ef4444", shortcut: "" },
+        classLabels: remainingClasses
+      });
+    } else {
+      set({ classLabels: classLabels.filter((c) => c.name !== className) });
+    }
+  },
+
   deleteSelectedAnnotation: () => {
     const { selectedAnnotationId } = get();
     if (selectedAnnotationId) {
@@ -183,6 +268,18 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     } else {
       set({ hiddenClasses: [...hiddenClasses, className] });
     }
+  },
+
+  toggleLabels: () => {
+    set((state) => ({ showLabels: !state.showLabels }));
+  },
+
+  toggleForceCreateMode: () => {
+    set((state) => ({ isForceCreateMode: !state.isForceCreateMode }));
+  },
+
+  setActiveModelName: (name: string | null) => {
+    set({ activeModelName: name });
   },
 }));
 
