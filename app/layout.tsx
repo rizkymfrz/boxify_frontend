@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
+import Providers from "./providers";
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
@@ -43,7 +45,10 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-full flex flex-col overflow-hidden">
-        <TooltipProvider>{children}</TooltipProvider>
+        <Providers>
+          <TooltipProvider>{children}</TooltipProvider>
+          <Toaster richColors position="bottom-right" />
+        </Providers>
       </body>
     </html>
   );

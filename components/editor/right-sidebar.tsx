@@ -11,16 +11,25 @@ import {
   IconStack2,
 } from "@tabler/icons-react";
 
-export default function RightSidebar() {
+interface RightSidebarProps {
+  saveAndGo: (targetIndex: number) => void;
+  isSaving: boolean;
+}
+
+export default function RightSidebar({ saveAndGo, isSaving }: RightSidebarProps) {
   const images = useAnnotationStore((s) => s.images);
   const currentImageIndex = useAnnotationStore((s) => s.currentImageIndex);
   const annotations = useAnnotationStore((s) => s.annotations);
-  const goToImage = useAnnotationStore((s) => s.goToImage);
   const currentImage = useCurrentImage();
   const currentAnnotations = useCurrentAnnotations();
 
+  const handleImageClick = (index: number) => {
+    if (index === currentImageIndex || isSaving) return;
+    saveAndGo(index);
+  };
+
   return (
-    <div className="w-72 border-l border-border bg-card flex flex-col shrink-0">
+    <div className="w-72 border-l border-border bg-card flex flex-col shrink-0 overflow-hidden">
       {/* File Information */}
       <div className="px-4 py-3 flex items-center gap-2">
         <IconFileInfo className="size-4 text-muted-foreground" />
@@ -36,7 +45,7 @@ export default function RightSidebar() {
             Filename
           </span>
           <span className="text-xs text-foreground font-medium truncate max-w-40 text-right">
-            {currentImage.name}
+            {currentImage?.name ?? "—"}
           </span>
         </div>
         <div className="flex items-center justify-between">
@@ -44,7 +53,9 @@ export default function RightSidebar() {
             Resolution
           </span>
           <span className="text-xs text-foreground tabular-nums">
-            {currentImage.width} × {currentImage.height}
+            {currentImage && currentImage.width > 0
+              ? `${currentImage.width} × ${currentImage.height}`
+              : "Detecting…"}
           </span>
         </div>
         <div className="flex items-center justify-between">
@@ -69,7 +80,7 @@ export default function RightSidebar() {
       </div>
       <Separator />
 
-      <ScrollArea className="flex-1">
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-2 space-y-0.5">
           {images.map((image, index) => {
             const isCurrent = index === currentImageIndex;
@@ -78,10 +89,11 @@ export default function RightSidebar() {
               <button
                 key={image.id}
                 id={`image-item-${image.id}`}
-                onClick={() => goToImage(index)}
+                onClick={() => handleImageClick(index)}
+                disabled={isSaving}
                 className={cn(
                   "w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors",
-                  "hover:bg-accent/50",
+                  "hover:bg-accent/50 disabled:opacity-50",
                   isCurrent && "bg-accent text-accent-foreground"
                 )}
               >

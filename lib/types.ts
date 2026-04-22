@@ -1,3 +1,5 @@
+// ── Frontend domain types ──
+
 export interface Annotation {
   id: string;
   x: number;
@@ -33,10 +35,78 @@ export const CLASS_LABELS: ClassLabel[] = [
   { name: "Bus", color: "#EC4899", shortcut: "8" },
 ];
 
-export const DUMMY_IMAGES: ImageItem[] = [
-  { id: "img-1", name: "street_scene_001.jpg", url: "https://picsum.photos/seed/boxify1/1920/1080", width: 1920, height: 1080 },
-  { id: "img-2", name: "parking_lot_002.jpg", url: "https://picsum.photos/seed/boxify2/1920/1080", width: 1920, height: 1080 },
-  { id: "img-3", name: "intersection_003.jpg", url: "https://picsum.photos/seed/boxify3/1920/1080", width: 1920, height: 1080 },
-  { id: "img-4", name: "highway_004.jpg", url: "https://picsum.photos/seed/boxify4/1920/1080", width: 1920, height: 1080 },
-  { id: "img-5", name: "urban_005.jpg", url: "https://picsum.photos/seed/boxify5/1920/1080", width: 1920, height: 1080 },
-];
+// ── API types (matching backend Pydantic schemas) ──
+
+export interface BackendImageItem {
+  filename: string;
+  has_annotation: boolean;
+}
+
+export interface ImageListResponse {
+  images: BackendImageItem[];
+}
+
+export interface BoundingBoxSchema {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  label: string;
+}
+
+export interface AnnotationRequest {
+  image_width: number;
+  image_height: number;
+  boxes: BoundingBoxSchema[];
+}
+
+export interface AnnotationResponse {
+  message: string;
+  label_file: string;
+  box_count: number;
+}
+
+// ── Auth types (matching backend Pydantic schemas) ──
+
+export interface AuthLoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface AuthRegisterRequest {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  access_token: string;
+  token_type: string;
+  user_id: number;
+  username: string;
+}
+
+export interface AuthUser {
+  id: number;
+  username: string;
+}
+
+// ── Project types (matching backend Pydantic schemas) ──
+
+export interface ProjectListItem {
+  id: number;
+  name: string;
+  image_count: number;
+  annotated_count: number;
+  created_at: string; // ISO datetime string from backend
+}
+
+export interface ProjectListResponse {
+  projects: ProjectListItem[];
+}
+
+export interface ProjectCreateResponse {
+  id: number;
+  name: string;
+  image_count: number;
+  created_at: string;
+}

@@ -12,6 +12,11 @@ function useImage(url: string): [HTMLImageElement | null, "loading" | "loaded" |
   const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
 
   useEffect(() => {
+    if (!url) {
+      setImage(null);
+      setStatus("error");
+      return;
+    }
     setImage(null);
     setStatus("loading");
     const img = new window.Image();
@@ -41,7 +46,8 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
   const store = useAnnotationStore();
   const currentImage = useCurrentImage();
   const annotations = useCurrentAnnotations();
-  const [loadedImage, imageStatus] = useImage(currentImage.url);
+  const imageUrl = currentImage?.url ?? "";
+  const [loadedImage, imageStatus] = useImage(imageUrl);
 
   // ── View State (Zoom & Pan) ──
   const [viewState, setViewState] = useState({ scale: 1, x: 0, y: 0 });
@@ -62,7 +68,10 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
       y: (containerHeight - h * s) / 2,
     });
     setImgDim({ w, h });
-  }, [loadedImage, containerWidth, containerHeight, currentImage.url]);
+
+    // Report actual dimensions to store (used by save mutation)
+    store.setCurrentImageDimensions(w, h);
+  }, [loadedImage, containerWidth, containerHeight, imageUrl, store]);
 
   // ── Local drawing & panning state ──
   const [isDrawing, setIsDrawing] = useState(false);
@@ -334,7 +343,7 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
     crosshairPos.y <= imgBounds.bottom;
 
   // ── Loading / Error states ──
-  if (imageStatus === "loading") {
+  if (imageStatus === "loading" || imgDim.w === 0 || imgDim.h === 0) {
     return (
       <div className="w-full h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
@@ -380,18 +389,20 @@ export default function CanvasCore({ containerWidth, containerHeight }: CanvasCo
           )}
 
           {/* Existing annotations */}
-          {annotations.map((ann) => (
-            <AnnotationRect
-              key={ann.id}
-              annotation={ann}
-              isSelected={ann.id === store.selectedAnnotationId}
-              scale={viewState.scale}
-              onDragMove={handleDragMove}
-              onDragEnd={(e) => handleDragEnd(e, ann.id)}
-              onTransformEnd={(e) => handleTransformEnd(e, ann.id)}
-              onSelect={() => store.setSelectedAnnotation(ann.id)}
-            />
-          ))}
+          {annotations
+            .filter((ann) => !store.hiddenClasses.includes(ann.label))
+            .map((ann) => (
+              <AnnotationRect
+                key={ann.id}
+                annotation={ann}
+                isSelected={ann.id === store.selectedAnnotationId}
+                scale={viewState.scale}
+                onDragMove={handleDragMove}
+                onDragEnd={(e) => handleDragEnd(e, ann.id)}
+                onTransformEnd={(e) => handleTransformEnd(e, ann.id)}
+                onSelect={() => store.setSelectedAnnotation(ann.id)}
+              />
+            ))}
 
           {/* Drawing-in-progress rect */}
           {isDrawing && drawingRect && drawingRect.width > 0 && drawingRect.height > 0 && (

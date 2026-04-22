@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
+import { useCurrentImage } from "@/lib/store";
 
 const CanvasCore = dynamic(() => import("./canvas-core"), {
   ssr: false,
@@ -18,6 +19,7 @@ const CanvasCore = dynamic(() => import("./canvas-core"), {
 export default function AnnotationCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+  const currentImage = useCurrentImage();
 
   useEffect(() => {
     const container = containerRef.current;
@@ -44,8 +46,9 @@ export default function AnnotationCanvas() {
       ref={containerRef}
       className="w-full h-full relative overflow-hidden bg-[#0a0a0a]"
     >
-      {dimensions.width > 0 && dimensions.height > 0 && (
+      {dimensions.width > 0 && dimensions.height > 0 && currentImage && (
         <CanvasCore
+          key={currentImage.id}
           containerWidth={dimensions.width}
           containerHeight={dimensions.height}
         />
