@@ -2,7 +2,17 @@
 
 import { useEffect, useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { getImages, saveAnnotations, exportDataset, getAnnotations, deleteImage, uploadModel, getModels, autoLabelImage, API_BASE } from "./api";
+import {
+  getImages,
+  saveAnnotations,
+  exportDataset,
+  getAnnotations,
+  deleteImage,
+  uploadModel,
+  getModels,
+  autoLabelImage,
+  API_BASE,
+} from "./api";
 import { useAnnotationStore } from "./store";
 import type { ImageItem, AnnotationRequest } from "./types";
 
@@ -23,7 +33,7 @@ export function useImagesQuery(projectId: string) {
           width: 0, // resolved when canvas loads the image
           height: 0,
           annotationCount: item.annotation_count,
-        })
+        }),
       );
     },
     enabled: !!projectId,
@@ -81,7 +91,11 @@ export function useSaveAndNavigate(projectId: string) {
       const currentImage = state.images[state.currentImageIndex];
 
       // If no current image or dimensions unknown, just navigate
-      if (!currentImage || currentImage.width === 0 || currentImage.height === 0) {
+      if (
+        !currentImage ||
+        currentImage.width === 0 ||
+        currentImage.height === 0
+      ) {
         useAnnotationStore.getState().goToImage(targetIndex);
         return;
       }
@@ -111,10 +125,10 @@ export function useSaveAndNavigate(projectId: string) {
           onSettled: () => {
             useAnnotationStore.getState().goToImage(targetIndex);
           },
-        }
+        },
       );
     },
-    [saveMutation]
+    [saveMutation],
   );
 
   return { saveAndGo, isSaving: saveMutation.isPending };
@@ -130,7 +144,11 @@ export function useManualSave(projectId: string) {
     const state = useAnnotationStore.getState();
     const currentImage = state.images[state.currentImageIndex];
 
-    if (!currentImage || currentImage.width === 0 || currentImage.height === 0) {
+    if (
+      !currentImage ||
+      currentImage.width === 0 ||
+      currentImage.height === 0
+    ) {
       return;
     }
 
@@ -160,7 +178,7 @@ export function useManualSave(projectId: string) {
           setIsJustSaved(true);
           setTimeout(() => setIsJustSaved(false), 2000);
         },
-      }
+      },
     );
   }, [saveMutation]);
 
@@ -233,15 +251,25 @@ export function useAutoLabelMutation(projectId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ filename, modelName }: { filename: string; modelName: string }) => {
+    mutationFn: async ({
+      filename,
+      modelName,
+    }: {
+      filename: string;
+      modelName: string;
+    }) => {
       return autoLabelImage(projectId, filename, { model_name: modelName });
     },
     onSuccess: (_, variables) => {
       // Invalidate annotations for the current image
-      queryClient.invalidateQueries({ queryKey: ["annotations", projectId, variables.filename] });
+      queryClient.invalidateQueries({
+        queryKey: ["annotations", projectId, variables.filename],
+      });
       // Cast to Number: useClassesQuery stores the key as a number, but projectId here is a string.
       // Mismatched types would cause the invalidation to miss the correct cache entry.
-      queryClient.invalidateQueries({ queryKey: ["classes", Number(projectId)] });
+      queryClient.invalidateQueries({
+        queryKey: ["classes", Number(projectId)],
+      });
     },
   });
 }

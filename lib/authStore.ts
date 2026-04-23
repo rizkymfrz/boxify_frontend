@@ -17,7 +17,9 @@ function setAuthCookie(token: string | null) {
   if (typeof document === "undefined") return;
   if (token) {
     // 7-day expiry — adjust to match your JWT TTL
-    const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toUTCString();
+    const expires = new Date(
+      Date.now() + 7 * 24 * 60 * 60 * 1000,
+    ).toUTCString();
     document.cookie = `boxify-auth-token=${token}; path=/; expires=${expires}; SameSite=Lax`;
   } else {
     // Clear cookie
@@ -50,6 +52,6 @@ export const useAuthStore = create<AuthState>()(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
-    }
-  )
+    },
+  ),
 );

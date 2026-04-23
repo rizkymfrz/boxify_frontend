@@ -146,8 +146,10 @@ export default function RightSidebar({
             .map(({ img: image, idx: index }) => {
               const isCurrent = index === currentImageIndex;
               const liveAnnotations = annotations[image.id];
-              const displayCount = liveAnnotations ? liveAnnotations.length : (image.annotationCount || 0);
-              
+              const displayCount = liveAnnotations
+                ? liveAnnotations.length
+                : image.annotationCount || 0;
+
               return (
                 <div key={image.id} className="flex group w-full items-center">
                   <button

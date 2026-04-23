@@ -3,14 +3,16 @@ import { apiClient as api } from "./api";
 import { ProjectClass, ProjectClassCreate, ProjectClassUpdate } from "./types";
 
 // Fetchers
-export const getProjectClasses = async (projectId: number): Promise<ProjectClass[]> => {
+export const getProjectClasses = async (
+  projectId: number,
+): Promise<ProjectClass[]> => {
   const { data } = await api.get(`/projects/${projectId}/classes`);
   return data.classes;
 };
 
 export const createProjectClass = async (
   projectId: number,
-  payload: ProjectClassCreate
+  payload: ProjectClassCreate,
 ): Promise<ProjectClass> => {
   const { data } = await api.post(`/projects/${projectId}/classes`, payload);
   return data;
@@ -19,17 +21,22 @@ export const createProjectClass = async (
 export const updateProjectClass = async (
   projectId: number,
   classId: number,
-  payload: ProjectClassUpdate
+  payload: ProjectClassUpdate,
 ): Promise<ProjectClass> => {
-  const { data } = await api.put(`/projects/${projectId}/classes/${classId}`, payload);
+  const { data } = await api.put(
+    `/projects/${projectId}/classes/${classId}`,
+    payload,
+  );
   return data;
 };
 
 export const deleteProjectClass = async (
   projectId: number,
-  classId: number
+  classId: number,
 ): Promise<{ message: string }> => {
-  const { data } = await api.delete(`/projects/${projectId}/classes/${classId}`);
+  const { data } = await api.delete(
+    `/projects/${projectId}/classes/${classId}`,
+  );
   return data;
 };
 
@@ -45,7 +52,8 @@ export const useClassesQuery = (projectId: number) => {
 export const useCreateClassMutation = (projectId: number) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (payload: ProjectClassCreate) => createProjectClass(projectId, payload),
+    mutationFn: (payload: ProjectClassCreate) =>
+      createProjectClass(projectId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["classes", projectId] });
     },
@@ -55,11 +63,18 @@ export const useCreateClassMutation = (projectId: number) => {
 export const useUpdateClassMutation = (projectId: number) => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ classId, payload }: { classId: number; payload: ProjectClassUpdate }) =>
-      updateProjectClass(projectId, classId, payload),
+    mutationFn: ({
+      classId,
+      payload,
+    }: {
+      classId: number;
+      payload: ProjectClassUpdate;
+    }) => updateProjectClass(projectId, classId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["classes", projectId] });
-      queryClient.invalidateQueries({ queryKey: ["annotations", String(projectId)] });
+      queryClient.invalidateQueries({
+        queryKey: ["annotations", String(projectId)],
+      });
     },
   });
 };

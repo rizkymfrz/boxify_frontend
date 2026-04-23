@@ -111,7 +111,9 @@ function EditorContent() {
     }
   }, [projectId, router]);
 
-  const [initializedProjectId, setInitializedProjectId] = useState<string | null>(null);
+  const [initializedProjectId, setInitializedProjectId] = useState<
+    string | null
+  >(null);
 
   // ── Reset global state when entering project ──
   useEffect(() => {
@@ -125,8 +127,6 @@ function EditorContent() {
   useEffect(() => {
     return () => useAnnotationStore.getState().resetEditorState();
   }, []);
-
-
 
   const store = useAnnotationStore();
   const {

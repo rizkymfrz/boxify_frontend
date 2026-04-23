@@ -10,7 +10,9 @@ const CanvasCore = dynamic(() => import("./canvas-core"), {
     <div className="w-full h-full flex items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-3">
         <div className="size-6 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        <span className="text-xs text-muted-foreground">Initializing canvas…</span>
+        <span className="text-xs text-muted-foreground">
+          Initializing canvas…
+        </span>
       </div>
     </div>
   ),

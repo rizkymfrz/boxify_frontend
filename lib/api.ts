@@ -45,20 +45,30 @@ apiClient.interceptors.response.use(
       window.location.href = "/login";
     }
     return Promise.reject(error);
-  }
+  },
 );
 
 // ── Auth Fetchers ──
 
 /** POST /api/auth/login → receive JWT token */
-export async function login(credentials: AuthLoginRequest): Promise<AuthResponse> {
-  const { data } = await apiClient.post<AuthResponse>("/auth/login", credentials);
+export async function login(
+  credentials: AuthLoginRequest,
+): Promise<AuthResponse> {
+  const { data } = await apiClient.post<AuthResponse>(
+    "/auth/login",
+    credentials,
+  );
   return data;
 }
 
 /** POST /api/auth/register → create account + receive JWT token */
-export async function register(credentials: AuthRegisterRequest): Promise<AuthResponse> {
-  const { data } = await apiClient.post<AuthResponse>("/auth/register", credentials);
+export async function register(
+  credentials: AuthRegisterRequest,
+): Promise<AuthResponse> {
+  const { data } = await apiClient.post<AuthResponse>(
+    "/auth/register",
+    credentials,
+  );
   return data;
 }
 
@@ -76,17 +86,24 @@ export async function getProjects(): Promise<ProjectListResponse> {
  * the body is a FormData instance.
  */
 export async function createProject(
-  formData: FormData
+  formData: FormData,
 ): Promise<ProjectCreateResponse> {
-  const { data } = await apiClient.post<ProjectCreateResponse>("/projects", formData);
+  const { data } = await apiClient.post<ProjectCreateResponse>(
+    "/projects",
+    formData,
+  );
   return data;
 }
 
 // ── Image Fetchers ──
 
 /** GET /api/projects/{projectId}/images → list of image objects */
-export async function getImages(projectId: string): Promise<BackendImageItem[]> {
-  const { data } = await apiClient.get<ImageListResponse>(`/projects/${projectId}/images`);
+export async function getImages(
+  projectId: string,
+): Promise<BackendImageItem[]> {
+  const { data } = await apiClient.get<ImageListResponse>(
+    `/projects/${projectId}/images`,
+  );
   return data.images;
 }
 
@@ -94,11 +111,11 @@ export async function getImages(projectId: string): Promise<BackendImageItem[]> 
 export async function saveAnnotations(
   projectId: string,
   filename: string,
-  payload: AnnotationRequest
+  payload: AnnotationRequest,
 ): Promise<AnnotationResponse> {
   const { data } = await apiClient.post<AnnotationResponse>(
     `/projects/${projectId}/annotations/${encodeURIComponent(filename)}`,
-    payload
+    payload,
   );
   return data;
 }
@@ -106,10 +123,10 @@ export async function saveAnnotations(
 /** GET /api/projects/{projectId}/annotations/{filename} → load bounding boxes */
 export async function getAnnotations(
   projectId: string,
-  filename: string
+  filename: string,
 ): Promise<AnnotationRequest> {
   const { data } = await apiClient.get<AnnotationRequest>(
-    `/projects/${projectId}/annotations/${encodeURIComponent(filename)}`
+    `/projects/${projectId}/annotations/${encodeURIComponent(filename)}`,
   );
   return data;
 }
@@ -125,10 +142,10 @@ export async function exportDataset(projectId: string): Promise<Blob> {
 /** DELETE /api/projects/{projectId}/images/{filename} → delete an image */
 export async function deleteImage(
   projectId: string,
-  filename: string
+  filename: string,
 ): Promise<{ message: string }> {
   const { data } = await apiClient.delete<{ message: string }>(
-    `/projects/${projectId}/images/${encodeURIComponent(filename)}`
+    `/projects/${projectId}/images/${encodeURIComponent(filename)}`,
   );
   return data;
 }
@@ -136,18 +153,18 @@ export async function deleteImage(
 /** POST /api/projects/{projectId}/models → upload a model */
 export async function uploadModel(
   projectId: string,
-  formData: FormData
+  formData: FormData,
 ): Promise<{ message: string; model_name: string }> {
-  const { data } = await apiClient.post<{ message: string; model_name: string }>(
-    `/projects/${projectId}/models`,
-    formData
-  );
+  const { data } = await apiClient.post<{
+    message: string;
+    model_name: string;
+  }>(`/projects/${projectId}/models`, formData);
   return data;
 }
 
 /** GET /api/projects/{projectId}/models → list saved models */
 export async function getModels(
-  projectId: string
+  projectId: string,
 ): Promise<{ id: number; name: string; uploaded_at: string }[]> {
   const { data } = await apiClient.get<{
     models: { id: number; name: string; uploaded_at: string }[];
@@ -159,11 +176,15 @@ export async function getModels(
 export async function autoLabelImage(
   projectId: string,
   filename: string,
-  payload: { model_name: string }
+  payload: { model_name: string },
 ): Promise<{ message: string; boxes_added: number; classes_created: number }> {
-  const { data } = await apiClient.post<{ message: string; boxes_added: number; classes_created: number }>(
+  const { data } = await apiClient.post<{
+    message: string;
+    boxes_added: number;
+    classes_created: number;
+  }>(
     `/projects/${projectId}/images/${encodeURIComponent(filename)}/auto-label`,
-    payload
+    payload,
   );
   return data;
 }

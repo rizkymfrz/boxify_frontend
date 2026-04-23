@@ -235,8 +235,11 @@ export default function CanvasCore({
   const finalizePolygon = useCallback(() => {
     const pts = store.currentPolygonPoints;
     if (pts.length > 2) {
-      let minX = pts[0].x, maxX = pts[0].x, minY = pts[0].y, maxY = pts[0].y;
-      pts.forEach(p => {
+      let minX = pts[0].x,
+        maxX = pts[0].x,
+        minY = pts[0].y,
+        maxY = pts[0].y;
+      pts.forEach((p) => {
         if (p.x < minX) minX = p.x;
         if (p.x > maxX) maxX = p.x;
         if (p.y < minY) minY = p.y;
@@ -271,29 +274,39 @@ export default function CanvasCore({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [store, finalizePolygon]);
 
-  const handleDragMovePolygon = useCallback(
+  const handleDragMoveGroup = useCallback(
     (e: Konva.KonvaEventObject<DragEvent>, ann: Annotation) => {
       const node = e.target;
-      const newX = Math.max(-ann.x, Math.min(node.x(), imgDim.w - ann.width - ann.x));
-      const newY = Math.max(-ann.y, Math.min(node.y(), imgDim.h - ann.height - ann.y));
+      const newX = Math.max(
+        -ann.x,
+        Math.min(node.x(), imgDim.w - ann.width - ann.x),
+      );
+      const newY = Math.max(
+        -ann.y,
+        Math.min(node.y(), imgDim.h - ann.height - ann.y),
+      );
       node.x(newX);
       node.y(newY);
     },
     [imgDim.w, imgDim.h],
   );
 
-  const handleDragEndPolygon = useCallback(
-    (e: Konva.KonvaEventObject<DragEvent>, annotationId: string, ann: Annotation) => {
+  const handleDragEndGroup = useCallback(
+    (
+      e: Konva.KonvaEventObject<DragEvent>,
+      annotationId: string,
+      ann: Annotation,
+    ) => {
       const node = e.target;
       const dx = node.x();
       const dy = node.y();
       node.x(0);
       node.y(0);
-      const newPoints = ann.points?.map(p => ({ x: p.x + dx, y: p.y + dy }));
-      store.updateAnnotation(annotationId, { 
-        x: ann.x + dx, 
-        y: ann.y + dy, 
-        points: newPoints 
+      const newPoints = ann.points?.map((p) => ({ x: p.x + dx, y: p.y + dy }));
+      store.updateAnnotation(annotationId, {
+        x: ann.x + dx,
+        y: ann.y + dy,
+        points: newPoints,
       });
     },
     [store],
@@ -331,9 +344,19 @@ export default function CanvasCore({
       )
         return;
 
-      // Clicked on an annotation rect → select it
-      if (!store.isForceCreateMode && target.name() === "annotation-rect") {
-        store.setSelectedAnnotation(target.id());
+      // Clicked on an annotation (Rect or Polygon Group/Line) → select it
+      let curr: Konva.Node | null = target;
+      let foundId: string | null = null;
+      while (curr && curr !== stageRef.current) {
+        if (curr.name() === "annotation-rect" && curr.id()) {
+          foundId = curr.id();
+          break;
+        }
+        curr = curr.getParent();
+      }
+
+      if (!store.isForceCreateMode && foundId) {
+        store.setSelectedAnnotation(foundId);
         return;
       }
 
@@ -363,7 +386,16 @@ export default function CanvasCore({
       setDrawingRect({ x: imgPos.x, y: imgPos.y, width: 0, height: 0 });
       setIsDrawing(true);
     },
-    [loadedImage, store, stageToImage, viewState.x, viewState.y, isSpaceDown, finalizePolygon, viewState.scale],
+    [
+      loadedImage,
+      store,
+      stageToImage,
+      viewState.x,
+      viewState.y,
+      isSpaceDown,
+      finalizePolygon,
+      viewState.scale,
+    ],
   );
 
   const handleMouseMove = useCallback(
@@ -435,54 +467,44 @@ export default function CanvasCore({
     setPanStart(null);
   }, []);
 
-  // ── Drag handler: constrain rect within image bounds ──
-  const handleDragMove = useCallback(
-    (e: Konva.KonvaEventObject<DragEvent>) => {
-      const node = e.target;
-      const newX = Math.max(0, Math.min(node.x(), imgDim.w - node.width()));
-      const newY = Math.max(0, Math.min(node.y(), imgDim.h - node.height()));
-      node.x(newX);
-      node.y(newY);
-    },
-    [imgDim.w, imgDim.h],
-  );
-
-  const handleDragEnd = useCallback(
-    (e: Konva.KonvaEventObject<DragEvent>, annotationId: string) => {
-      const node = e.target;
-      store.updateAnnotation(annotationId, { x: node.x(), y: node.y() });
-    },
-    [store],
-  );
-
   // ── Transform end: apply scale to width/height ──
   const handleTransformEnd = useCallback(
-    (e: Konva.KonvaEventObject<Event>, annotationId: string) => {
-      const node = e.target as Konva.Rect;
+    (
+      e: Konva.KonvaEventObject<Event>,
+      annotationId: string,
+      ann: Annotation,
+    ) => {
+      const node = e.target;
       const sx = node.scaleX();
       const sy = node.scaleY();
       node.scaleX(1);
       node.scaleY(1);
 
-      let newW = Math.max(5, node.width() * sx);
-      let newH = Math.max(5, node.height() * sy);
-      let newX = node.x();
-      let newY = node.y();
+      const dx = node.x();
+      const dy = node.y();
+      node.x(0);
+      node.y(0);
 
-      // Clamp to image
-      newX = Math.max(0, Math.min(newX, imgDim.w - newW));
-      newY = Math.max(0, Math.min(newY, imgDim.h - newH));
-      newW = Math.min(newW, imgDim.w - newX);
-      newH = Math.min(newH, imgDim.h - newY);
+      const newX = ann.x + dx;
+      const newY = ann.y + dy;
+      const newW = Math.max(5, ann.width * sx);
+      const newH = Math.max(5, ann.height * sy);
+
+      // Simple scaling for points if it's a polygon
+      const newPoints = ann.points?.map((p) => ({
+        x: newX + (p.x - ann.x) * sx,
+        y: newY + (p.y - ann.y) * sy,
+      }));
 
       store.updateAnnotation(annotationId, {
         x: newX,
         y: newY,
         width: newW,
         height: newH,
+        points: newPoints,
       });
     },
-    [store, imgDim.w, imgDim.h],
+    [store],
   );
 
   // ── Is crosshair within image bounds? ──
@@ -557,66 +579,76 @@ export default function CanvasCore({
           {/* Existing annotations */}
           {annotations
             .filter((ann) => !store.hiddenClasses.includes(ann.label))
-            .map((ann) => (
+            .map((ann) =>
               ann.type === "polygon" ? (
                 <AnnotationPolygon
                   key={ann.id}
                   annotation={ann}
-                  dynamicColor={classColorMap.get(ann.label) || ann.color || "#FFFFFF"}
+                  dynamicColor={
+                    classColorMap.get(ann.label) || ann.color || "#FFFFFF"
+                  }
                   isSelected={ann.id === store.selectedAnnotationId}
                   scale={viewState.scale}
                   showLabels={store.showLabels}
-                  onDragMove={handleDragMovePolygon}
-                  onDragEnd={handleDragEndPolygon}
+                  onDragMove={handleDragMoveGroup}
+                  onDragEnd={handleDragEndGroup}
+                  onTransformEnd={(e) => handleTransformEnd(e, ann.id, ann)}
                   onSelect={() => store.setSelectedAnnotation(ann.id)}
                 />
               ) : (
                 <AnnotationRect
                   key={ann.id}
                   annotation={ann}
-                  dynamicColor={classColorMap.get(ann.label) || ann.color || "#FFFFFF"}
+                  dynamicColor={
+                    classColorMap.get(ann.label) || ann.color || "#FFFFFF"
+                  }
                   isSelected={ann.id === store.selectedAnnotationId}
                   scale={viewState.scale}
                   showLabels={store.showLabels}
-                  onDragMove={handleDragMove}
-                  onDragEnd={(e) => handleDragEnd(e, ann.id)}
-                  onTransformEnd={(e) => handleTransformEnd(e, ann.id)}
+                  onDragMove={handleDragMoveGroup}
+                  onDragEnd={handleDragEndGroup}
+                  onTransformEnd={(e) => handleTransformEnd(e, ann.id, ann)}
                   onSelect={() => store.setSelectedAnnotation(ann.id)}
                 />
-              )
-            ))}
+              ),
+            )}
 
           {/* Active Polygon drawing */}
-          {store.drawingMode === "polygon" && store.currentPolygonPoints.length > 0 && (
-            <Group>
-              <Line
-                points={store.currentPolygonPoints.flatMap(p => [p.x, p.y])}
-                stroke={store.activeClassLabel.color}
-                strokeWidth={2}
-                strokeScaleEnabled={false}
-              />
-              {crosshairPos && (
+          {store.drawingMode === "polygon" &&
+            store.currentPolygonPoints.length > 0 && (
+              <Group>
                 <Line
-                  points={[
-                    store.currentPolygonPoints[store.currentPolygonPoints.length - 1].x,
-                    store.currentPolygonPoints[store.currentPolygonPoints.length - 1].y,
-                    stageToImage(crosshairPos.x, crosshairPos.y).x,
-                    stageToImage(crosshairPos.x, crosshairPos.y).y,
-                  ]}
+                  points={store.currentPolygonPoints.flatMap((p) => [p.x, p.y])}
                   stroke={store.activeClassLabel.color}
                   strokeWidth={2}
-                  dash={[6 / viewState.scale, 4 / viewState.scale]}
                   strokeScaleEnabled={false}
                 />
-              )}
-              <Circle
-                x={store.currentPolygonPoints[0].x}
-                y={store.currentPolygonPoints[0].y}
-                radius={5 / viewState.scale}
-                fill={store.activeClassLabel.color}
-              />
-            </Group>
-          )}
+                {crosshairPos && (
+                  <Line
+                    points={[
+                      store.currentPolygonPoints[
+                        store.currentPolygonPoints.length - 1
+                      ].x,
+                      store.currentPolygonPoints[
+                        store.currentPolygonPoints.length - 1
+                      ].y,
+                      stageToImage(crosshairPos.x, crosshairPos.y).x,
+                      stageToImage(crosshairPos.x, crosshairPos.y).y,
+                    ]}
+                    stroke={store.activeClassLabel.color}
+                    strokeWidth={2}
+                    dash={[6 / viewState.scale, 4 / viewState.scale]}
+                    strokeScaleEnabled={false}
+                  />
+                )}
+                <Circle
+                  x={store.currentPolygonPoints[0].x}
+                  y={store.currentPolygonPoints[0].y}
+                  radius={5 / viewState.scale}
+                  fill={store.activeClassLabel.color}
+                />
+              </Group>
+            )}
 
           {/* Drawing-in-progress rect */}
           {isDrawing &&
@@ -709,9 +741,17 @@ interface AnnotationRectProps {
   isSelected: boolean;
   scale: number;
   showLabels: boolean;
-  onDragMove: (e: Konva.KonvaEventObject<DragEvent>) => void;
-  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => void;
-  onTransformEnd: (e: Konva.KonvaEventObject<Event>) => void;
+  onDragMove: (e: Konva.KonvaEventObject<DragEvent>, ann: Annotation) => void;
+  onDragEnd: (
+    e: Konva.KonvaEventObject<DragEvent>,
+    annotationId: string,
+    ann: Annotation,
+  ) => void;
+  onTransformEnd: (
+    e: Konva.KonvaEventObject<Event>,
+    annotationId: string,
+    ann: Annotation,
+  ) => void;
   onSelect: () => void;
 }
 
@@ -730,8 +770,16 @@ function AnnotationRect({
   const labelPadding = 3 / scale;
 
   return (
-    <>
-      {/* Label background + text */}
+    <Group
+      id={ann.id}
+      name="annotation-rect"
+      draggable={isSelected}
+      onClick={onSelect}
+      onTap={onSelect}
+      onDragMove={(e) => onDragMove(e, ann)}
+      onDragEnd={(e) => onDragEnd(e, ann.id, ann)}
+      onTransformEnd={(e) => onTransformEnd(e, ann.id, ann)}
+    >
       {showLabels && (
         <Label
           x={ann.x}
@@ -749,10 +797,7 @@ function AnnotationRect({
         </Label>
       )}
 
-      {/* Box rect */}
       <Rect
-        id={ann.id}
-        name="annotation-rect"
         x={ann.x}
         y={ann.y}
         width={ann.width}
@@ -761,14 +806,8 @@ function AnnotationRect({
         stroke={dynamicColor}
         strokeWidth={isSelected ? 2.5 : 1.5}
         strokeScaleEnabled={false}
-        draggable={isSelected}
-        onClick={onSelect}
-        onTap={onSelect}
-        onDragMove={onDragMove}
-        onDragEnd={onDragEnd}
-        onTransformEnd={onTransformEnd}
       />
-    </>
+    </Group>
   );
 }
 
@@ -779,7 +818,16 @@ interface AnnotationPolygonProps {
   scale: number;
   showLabels: boolean;
   onDragMove: (e: Konva.KonvaEventObject<DragEvent>, ann: Annotation) => void;
-  onDragEnd: (e: Konva.KonvaEventObject<DragEvent>, annotationId: string, ann: Annotation) => void;
+  onDragEnd: (
+    e: Konva.KonvaEventObject<DragEvent>,
+    annotationId: string,
+    ann: Annotation,
+  ) => void;
+  onTransformEnd: (
+    e: Konva.KonvaEventObject<Event>,
+    annotationId: string,
+    ann: Annotation,
+  ) => void;
   onSelect: () => void;
 }
 
@@ -791,31 +839,15 @@ function AnnotationPolygon({
   showLabels,
   onDragMove,
   onDragEnd,
+  onTransformEnd,
   onSelect,
 }: AnnotationPolygonProps) {
   const labelFontSize = Math.max(10, 12 / scale);
   const labelPadding = 3 / scale;
-  const flatPoints = ann.points?.flatMap(p => [p.x, p.y]) || [];
+  const flatPoints = ann.points?.flatMap((p) => [p.x, p.y]) || [];
 
   return (
     <>
-      {showLabels && (
-        <Label
-          x={ann.x}
-          y={ann.y - (labelFontSize + labelPadding * 2 + 2 / scale)}
-          listening={false}
-        >
-          <Tag fill={dynamicColor} />
-          <Text
-            text={ann.label}
-            fontSize={labelFontSize}
-            fill="#000"
-            fontFamily="monospace"
-            padding={labelPadding}
-          />
-        </Label>
-      )}
-
       <Group
         id={ann.id}
         name="annotation-rect"
@@ -824,8 +856,36 @@ function AnnotationPolygon({
         onTap={onSelect}
         onDragMove={(e) => onDragMove(e, ann)}
         onDragEnd={(e) => onDragEnd(e, ann.id, ann)}
+        onTransformEnd={(e) => onTransformEnd(e, ann.id, ann)}
       >
+        {/* Invisible hit area for easier selection/dragging */}
+        <Rect
+          x={ann.x}
+          y={ann.y}
+          width={ann.width}
+          height={ann.height}
+          fill="transparent"
+        />
+
+        {showLabels && (
+          <Label
+            x={ann.x}
+            y={ann.y - (labelFontSize + labelPadding * 2 + 2 / scale)}
+            listening={false}
+          >
+            <Tag fill={dynamicColor} />
+            <Text
+              text={ann.label}
+              fontSize={labelFontSize}
+              fill="#000"
+              fontFamily="monospace"
+              padding={labelPadding}
+            />
+          </Label>
+        )}
+
         <Line
+          name="annotation-rect"
           points={flatPoints}
           closed={true}
           fill={dynamicColor + (isSelected ? "33" : "1A")}

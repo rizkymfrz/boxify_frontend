@@ -1,9 +1,5 @@
 import { create } from "zustand";
-import {
-  type Annotation,
-  type ImageItem,
-  type ClassLabel,
-} from "./types";
+import { type Annotation, type ImageItem, type ClassLabel } from "./types";
 
 interface AnnotationState {
   // Data
@@ -72,7 +68,10 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     if (currentImages.length === 0) {
       set({ images, currentImageIndex: 0, selectedAnnotationId: null });
     } else {
-      const nextIndex = Math.min(currentImageIndex, Math.max(0, images.length - 1));
+      const nextIndex = Math.min(
+        currentImageIndex,
+        Math.max(0, images.length - 1),
+      );
       set({ images, currentImageIndex: nextIndex });
     }
   },
@@ -113,14 +112,20 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   nextImage: () => {
     const { currentImageIndex, images } = get();
     if (currentImageIndex < images.length - 1) {
-      set({ currentImageIndex: currentImageIndex + 1, selectedAnnotationId: null });
+      set({
+        currentImageIndex: currentImageIndex + 1,
+        selectedAnnotationId: null,
+      });
     }
   },
 
   prevImage: () => {
     const { currentImageIndex } = get();
     if (currentImageIndex > 0) {
-      set({ currentImageIndex: currentImageIndex - 1, selectedAnnotationId: null });
+      set({
+        currentImageIndex: currentImageIndex - 1,
+        selectedAnnotationId: null,
+      });
     }
   },
 
@@ -152,7 +157,9 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     set({
       annotations: {
         ...annotations,
-        [imageId]: existing.map((a) => (a.id === id ? { ...a, ...changes } : a)),
+        [imageId]: existing.map((a) =>
+          a.id === id ? { ...a, ...changes } : a,
+        ),
       },
     });
   },
@@ -231,37 +238,42 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
       // If active label gone or blank, default to first in new list
       activeClassLabel: stillExists
         ? activeClassLabel
-        : labels[0] ?? { name: "", color: "#ef4444", shortcut: "" },
+        : (labels[0] ?? { name: "", color: "#ef4444", shortcut: "" }),
     });
   },
 
   purgeClass: (className: string) => {
-    const { annotations, activeClassLabel, classLabels, selectedAnnotationId } = get();
+    const { annotations, activeClassLabel, classLabels, selectedAnnotationId } =
+      get();
     const newAnnotations: Record<string, Annotation[]> = {};
     for (const [imgId, anns] of Object.entries(annotations)) {
       newAnnotations[imgId] = anns.filter((a) => a.label !== className);
     }
-    
+
     // Also reset selectedAnnotationId if the selected annotation was purged
     let newSelectedId = selectedAnnotationId;
     if (selectedAnnotationId) {
-      const stillExists = Object.values(newAnnotations).some(anns => 
-        anns.some(a => a.id === selectedAnnotationId)
+      const stillExists = Object.values(newAnnotations).some((anns) =>
+        anns.some((a) => a.id === selectedAnnotationId),
       );
       if (!stillExists) newSelectedId = null;
     }
 
-    set({ 
+    set({
       annotations: newAnnotations,
-      selectedAnnotationId: newSelectedId 
+      selectedAnnotationId: newSelectedId,
     });
 
     // If the purged class was active, reset to the first available class
     if (activeClassLabel.name === className) {
       const remainingClasses = classLabels.filter((c) => c.name !== className);
       set({
-        activeClassLabel: remainingClasses[0] ?? { name: "", color: "#ef4444", shortcut: "" },
-        classLabels: remainingClasses
+        activeClassLabel: remainingClasses[0] ?? {
+          name: "",
+          color: "#ef4444",
+          shortcut: "",
+        },
+        classLabels: remainingClasses,
       });
     } else {
       set({ classLabels: classLabels.filter((c) => c.name !== className) });
@@ -314,7 +326,7 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 // Selector: get current image (returns undefined if no images loaded)
 export const useCurrentImage = () =>
   useAnnotationStore((s) =>
-    s.images.length > 0 ? s.images[s.currentImageIndex] : undefined
+    s.images.length > 0 ? s.images[s.currentImageIndex] : undefined,
   );
 
 const EMPTY_ANNOTATIONS: Annotation[] = [];

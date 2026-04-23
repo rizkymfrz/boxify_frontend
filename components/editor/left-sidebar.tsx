@@ -49,7 +49,9 @@ export default function LeftSidebar({ projectId }: { projectId: number }) {
   const activeModelName = useAnnotationStore((s) => s.activeModelName);
   const setActiveModelName = useAnnotationStore((s) => s.setActiveModelName);
   const uploadModelMutation = useUploadModelMutation(projectId.toString());
-  const { data: savedModels, isPending: isModelsLoading } = useGetModelsQuery(projectId.toString());
+  const { data: savedModels, isPending: isModelsLoading } = useGetModelsQuery(
+    projectId.toString(),
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-select the first model when the project loads
@@ -92,10 +94,13 @@ export default function LeftSidebar({ projectId }: { projectId: number }) {
   }, [dbClasses, setClassLabels]);
 
   const annotations = useCurrentAnnotations();
-  const classCounts = annotations.reduce((acc, ann) => {
-    acc[ann.label] = (acc[ann.label] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
+  const classCounts = annotations.reduce(
+    (acc, ann) => {
+      acc[ann.label] = (acc[ann.label] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
   const hasClasses = classLabels.length > 0;
   const activeIsValid = hasClasses && !!activeClassLabel.name;
@@ -183,7 +188,7 @@ export default function LeftSidebar({ projectId }: { projectId: number }) {
                   className={cn(
                     "w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors",
                     "hover:bg-accent/50",
-                    isActive && "bg-accent text-accent-foreground"
+                    isActive && "bg-accent text-accent-foreground",
                   )}
                 >
                   {/* Color dot */}
@@ -200,7 +205,7 @@ export default function LeftSidebar({ projectId }: { projectId: number }) {
                         isActive
                           ? "font-medium text-foreground"
                           : "text-muted-foreground",
-                        isHidden && "opacity-50 line-through"
+                        isHidden && "opacity-50 line-through",
                       )}
                     >
                       {label.name}
@@ -210,7 +215,7 @@ export default function LeftSidebar({ projectId }: { projectId: number }) {
                         variant="secondary"
                         className={cn(
                           "text-[10px] h-4 px-1.5 tabular-nums",
-                          isHidden && "opacity-50"
+                          isHidden && "opacity-50",
                         )}
                       >
                         {classCounts[label.name]}
@@ -226,7 +231,7 @@ export default function LeftSidebar({ projectId }: { projectId: number }) {
                         "text-[10px] px-1.5 h-4 tabular-nums shrink-0",
                         isActive
                           ? "border-foreground/30 text-foreground"
-                          : "border-muted-foreground/30 text-muted-foreground"
+                          : "border-muted-foreground/30 text-muted-foreground",
                       )}
                     >
                       {label.shortcut}
@@ -243,7 +248,7 @@ export default function LeftSidebar({ projectId }: { projectId: number }) {
                       "p-1 -mr-1 rounded-md transition-colors cursor-pointer shrink-0",
                       isHidden
                         ? "text-muted-foreground hover:text-foreground"
-                        : "text-foreground/70 hover:text-foreground"
+                        : "text-foreground/70 hover:text-foreground",
                     )}
                   >
                     {isHidden ? (
@@ -259,7 +264,7 @@ export default function LeftSidebar({ projectId }: { projectId: number }) {
       </ScrollArea>
 
       <Separator />
-      
+
       {/* AI Assistant Section */}
       <div className="px-4 py-3 flex flex-col gap-2 bg-accent/20">
         <div className="flex items-center gap-2">
@@ -273,7 +278,10 @@ export default function LeftSidebar({ projectId }: { projectId: number }) {
         {isModelsLoading ? (
           <div className="space-y-1">
             {[...Array(2)].map((_, i) => (
-              <div key={i} className="h-8 w-full rounded-md bg-muted/50 animate-pulse" />
+              <div
+                key={i}
+                className="h-8 w-full rounded-md bg-muted/50 animate-pulse"
+              />
             ))}
           </div>
         ) : savedModels && savedModels.length > 0 ? (
@@ -289,25 +297,31 @@ export default function LeftSidebar({ projectId }: { projectId: number }) {
                     "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors text-xs",
                     isActive
                       ? "bg-purple-500/15 border border-purple-500/30 text-purple-600 dark:text-purple-400"
-                      : "bg-background border border-border text-muted-foreground hover:bg-accent hover:text-foreground"
+                      : "bg-background border border-border text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   <span
                     className={cn(
                       "size-1.5 rounded-full shrink-0",
-                      isActive ? "bg-purple-500" : "bg-muted-foreground/40"
+                      isActive ? "bg-purple-500" : "bg-muted-foreground/40",
                     )}
                   />
-                  <span className="truncate flex-1 font-medium">{model.name}</span>
+                  <span className="truncate flex-1 font-medium">
+                    {model.name}
+                  </span>
                   {isActive && (
-                    <span className="text-[10px] shrink-0 text-purple-500 font-semibold">ACTIVE</span>
+                    <span className="text-[10px] shrink-0 text-purple-500 font-semibold">
+                      ACTIVE
+                    </span>
                   )}
                 </button>
               );
             })}
           </div>
         ) : (
-          <p className="text-[11px] text-muted-foreground/70 italic">No models uploaded yet.</p>
+          <p className="text-[11px] text-muted-foreground/70 italic">
+            No models uploaded yet.
+          </p>
         )}
 
         {/* Upload button */}

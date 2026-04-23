@@ -4,7 +4,11 @@ import { useCallback, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useAnnotationStore, useCurrentAnnotations } from "@/lib/store";
-import { useExportDataset, useManualSave, useAutoLabelMutation } from "@/lib/queries";
+import {
+  useExportDataset,
+  useManualSave,
+  useAutoLabelMutation,
+} from "@/lib/queries";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -115,14 +119,17 @@ export default function TopToolbar({
       return;
     }
 
-    const newAnnotations = prevAnnotations.map(ann => ({
+    const newAnnotations = prevAnnotations.map((ann) => ({
       ...ann,
-      id: crypto.randomUUID()
+      id: crypto.randomUUID(),
     }));
 
     const currentImageId = images[currentImageIndex].id;
     const existingAnnotations = store.annotations[currentImageId] || [];
-    store.setAnnotations(currentImageId, [...existingAnnotations, ...newAnnotations]);
+    store.setAnnotations(currentImageId, [
+      ...existingAnnotations,
+      ...newAnnotations,
+    ]);
     toast.success("Annotations copied from previous image");
   }, [isFirst, isSaving, currentImageIndex, images, store]);
 
@@ -131,12 +138,22 @@ export default function TopToolbar({
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
 
-      if (e.key.toLowerCase() === "r" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (
+        e.key.toLowerCase() === "r" &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
         e.preventDefault();
         handleRepeatPrevious();
       }
 
-      if (e.key.toLowerCase() === "f" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (
+        e.key.toLowerCase() === "f" &&
+        !e.ctrlKey &&
+        !e.metaKey &&
+        !e.altKey
+      ) {
         e.preventDefault();
         store.toggleForceCreateMode();
       }
@@ -355,7 +372,9 @@ export default function TopToolbar({
               variant="outline"
               size="sm"
               onClick={handleAutoLabel}
-              disabled={!activeModelName || autoLabelMutation.isPending || isSaving}
+              disabled={
+                !activeModelName || autoLabelMutation.isPending || isSaving
+              }
               className="gap-1.5 border-purple-500/30 text-purple-600 hover:bg-purple-500/10 hover:text-purple-600 dark:text-purple-400 dark:hover:text-purple-300"
             >
               {autoLabelMutation.isPending ? (
@@ -367,7 +386,9 @@ export default function TopToolbar({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            {!activeModelName ? "Upload a model first to enable AI Auto-Detect" : "Run AI auto-labeling on this image"}
+            {!activeModelName
+              ? "Upload a model first to enable AI Auto-Detect"
+              : "Run AI auto-labeling on this image"}
           </TooltipContent>
         </Tooltip>
 
@@ -378,7 +399,10 @@ export default function TopToolbar({
               variant={store.isForceCreateMode ? "secondary" : "outline"}
               size="sm"
               onClick={store.toggleForceCreateMode}
-              className={cn("gap-1.5", store.isForceCreateMode && "border-primary text-primary")}
+              className={cn(
+                "gap-1.5",
+                store.isForceCreateMode && "border-primary text-primary",
+              )}
             >
               <IconSquarePlus className="size-3.5" />
               <span className="hidden sm:inline">Force Draw</span>
@@ -394,7 +418,10 @@ export default function TopToolbar({
                 variant={store.drawingMode === "bbox" ? "secondary" : "ghost"}
                 size="sm"
                 onClick={() => store.setDrawingMode("bbox")}
-                className={cn("gap-1.5 h-full px-2", store.drawingMode === "bbox" && "shadow-sm")}
+                className={cn(
+                  "gap-1.5 h-full px-2",
+                  store.drawingMode === "bbox" && "shadow-sm",
+                )}
               >
                 <IconSquare className="size-3.5" />
                 <span className="hidden xl:inline">Box</span>
@@ -405,10 +432,15 @@ export default function TopToolbar({
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
-                variant={store.drawingMode === "polygon" ? "secondary" : "ghost"}
+                variant={
+                  store.drawingMode === "polygon" ? "secondary" : "ghost"
+                }
                 size="sm"
                 onClick={() => store.setDrawingMode("polygon")}
-                className={cn("gap-1.5 h-full px-2", store.drawingMode === "polygon" && "shadow-sm")}
+                className={cn(
+                  "gap-1.5 h-full px-2",
+                  store.drawingMode === "polygon" && "shadow-sm",
+                )}
               >
                 <IconPolygon className="size-3.5" />
                 <span className="hidden xl:inline">Polygon</span>
@@ -432,7 +464,9 @@ export default function TopToolbar({
               <span className="hidden sm:inline">Repeat</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>Copy annotations from previous image (R)</TooltipContent>
+          <TooltipContent>
+            Copy annotations from previous image (R)
+          </TooltipContent>
         </Tooltip>
 
         <Tooltip>
@@ -445,11 +479,17 @@ export default function TopToolbar({
               disabled={isSaving}
               className="gap-1.5"
             >
-              {store.showLabels ? <IconEye className="size-3.5" /> : <IconEyeOff className="size-3.5" />}
+              {store.showLabels ? (
+                <IconEye className="size-3.5" />
+              ) : (
+                <IconEyeOff className="size-3.5" />
+              )}
               <span className="hidden sm:inline">Labels</span>
             </Button>
           </TooltipTrigger>
-          <TooltipContent>{store.showLabels ? "Hide Labels" : "Show Labels"}</TooltipContent>
+          <TooltipContent>
+            {store.showLabels ? "Hide Labels" : "Show Labels"}
+          </TooltipContent>
         </Tooltip>
 
         <Tooltip>
