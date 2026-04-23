@@ -12,7 +12,8 @@ import type {
 } from "./types";
 
 // ── Axios instance ──
-export const API_BASE = "http://localhost:8000/api";
+export const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000/api";
 
 export const apiClient = axios.create({
   baseURL: API_BASE,
