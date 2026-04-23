@@ -143,6 +143,11 @@ export default function CanvasCore({
   const stageRef = useRef<Konva.Stage>(null);
   const transformerRef = useRef<Konva.Transformer>(null);
 
+  // ── Class Color Lookup ──
+  const classColorMap = useMemo(() => {
+    return new Map(store.classLabels.map((l) => [l.name, l.color]));
+  }, [store.classLabels]);
+
   // ── Coordinate conversion: stage → image ──
   const stageToImage = useCallback(
     (stageX: number, stageY: number) => ({
@@ -471,6 +476,7 @@ export default function CanvasCore({
               <AnnotationRect
                 key={ann.id}
                 annotation={ann}
+                dynamicColor={classColorMap.get(ann.label) || ann.color || "#FFFFFF"}
                 isSelected={ann.id === store.selectedAnnotationId}
                 scale={viewState.scale}
                 showLabels={store.showLabels}
@@ -568,6 +574,7 @@ export default function CanvasCore({
 // ── Sub-component: Annotation Rectangle with label ──
 interface AnnotationRectProps {
   annotation: Annotation;
+  dynamicColor: string;
   isSelected: boolean;
   scale: number;
   showLabels: boolean;
@@ -579,6 +586,7 @@ interface AnnotationRectProps {
 
 function AnnotationRect({
   annotation: ann,
+  dynamicColor,
   isSelected,
   scale,
   showLabels,
@@ -599,7 +607,7 @@ function AnnotationRect({
           y={ann.y - (labelFontSize + labelPadding * 2 + 2 / scale)}
           listening={false}
         >
-          <Tag fill={ann.color} />
+          <Tag fill={dynamicColor} />
           <Text
             text={ann.label}
             fontSize={labelFontSize}
@@ -618,8 +626,8 @@ function AnnotationRect({
         y={ann.y}
         width={ann.width}
         height={ann.height}
-        fill={ann.color + (isSelected ? "33" : "1A")}
-        stroke={ann.color}
+        fill={dynamicColor + (isSelected ? "33" : "1A")}
+        stroke={dynamicColor}
         strokeWidth={isSelected ? 2.5 : 1.5}
         strokeScaleEnabled={false}
         draggable={isSelected}

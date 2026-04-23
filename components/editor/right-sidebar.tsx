@@ -145,7 +145,9 @@ export default function RightSidebar({
             )
             .map(({ img: image, idx: index }) => {
               const isCurrent = index === currentImageIndex;
-              const imageAnnotations = annotations[image.id] || [];
+              const liveAnnotations = annotations[image.id];
+              const displayCount = liveAnnotations ? liveAnnotations.length : (image.annotationCount || 0);
+              
               return (
                 <div key={image.id} className="flex group w-full items-center">
                   <button
@@ -176,12 +178,12 @@ export default function RightSidebar({
                         {image.name}
                       </p>
                     </div>
-                    {imageAnnotations.length > 0 && (
+                    {displayCount > 0 && (
                       <Badge
                         variant="secondary"
                         className="text-[10px] h-4 px-1.5 tabular-nums shrink-0"
                       >
-                        {imageAnnotations.length}
+                        {displayCount}
                       </Badge>
                     )}
                   </button>

@@ -19,10 +19,10 @@ export function useImagesQuery(projectId: string) {
         (item): ImageItem => ({
           id: item.filename,
           name: item.filename,
-          // Update the static URL to serve from the project images endpoint
           url: `${API_BASE}/projects/${projectId}/images/${encodeURIComponent(item.filename)}`,
           width: 0, // resolved when canvas loads the image
           height: 0,
+          annotationCount: item.annotation_count,
         })
       );
     },

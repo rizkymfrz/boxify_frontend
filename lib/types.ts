@@ -16,6 +16,7 @@ export interface ImageItem {
   url: string;
   width: number;
   height: number;
+  annotationCount: number;
 }
 
 export interface ClassLabel {
@@ -39,7 +40,7 @@ export const CLASS_LABELS: ClassLabel[] = [
 
 export interface BackendImageItem {
   filename: string;
-  has_annotation: boolean;
+  annotation_count: number;
 }
 
 export interface ImageListResponse {

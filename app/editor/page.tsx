@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useCallback, Suspense } from "react";
+import { useEffect, useCallback, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAnnotationStore } from "@/lib/store";
 import {
@@ -111,6 +111,23 @@ function EditorContent() {
     }
   }, [projectId, router]);
 
+  const [initializedProjectId, setInitializedProjectId] = useState<string | null>(null);
+
+  // ── Reset global state when entering project ──
+  useEffect(() => {
+    if (projectId && projectId !== initializedProjectId) {
+      useAnnotationStore.getState().resetEditorState();
+      setInitializedProjectId(projectId);
+    }
+  }, [projectId, initializedProjectId]);
+
+  // Clean up when leaving entirely
+  useEffect(() => {
+    return () => useAnnotationStore.getState().resetEditorState();
+  }, []);
+
+
+
   const store = useAnnotationStore();
   const {
     data: images,
@@ -201,6 +218,11 @@ function EditorContent() {
 
   if (!projectId) {
     return null; // will redirect in useEffect
+  }
+
+  // ── Wait for reset before rendering children ──
+  if (projectId !== initializedProjectId) {
+    return <EditorSkeleton />;
   }
 
   // ── Loading state ──

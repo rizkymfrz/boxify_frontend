@@ -39,9 +39,10 @@ interface AnnotationState {
   toggleLabels: () => void;
   toggleForceCreateMode: () => void;
   setActiveModelName: (name: string | null) => void;
+  resetEditorState: () => void;
 }
 
-export const useAnnotationStore = create<AnnotationState>((set, get) => ({
+const initialState = {
   images: [],
   currentImageIndex: 0,
   annotations: {},
@@ -52,6 +53,12 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
   showLabels: true,
   isForceCreateMode: false,
   activeModelName: null,
+};
+
+export const useAnnotationStore = create<AnnotationState>((set, get) => ({
+  ...initialState,
+
+  resetEditorState: () => set(initialState),
 
   setImages: (images: ImageItem[]) => {
     const { currentImageIndex, images: currentImages } = get();
