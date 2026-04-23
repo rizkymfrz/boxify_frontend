@@ -2,10 +2,12 @@
 
 export interface Annotation {
   id: string;
+  type?: "bbox" | "polygon";
   x: number;
   y: number;
   width: number;
   height: number;
+  points?: { x: number; y: number }[];
   label: string;
   color: string;
 }
@@ -53,6 +55,8 @@ export interface BoundingBoxSchema {
   width: number;
   height: number;
   label: string;
+  type?: "bbox" | "polygon";
+  points?: { x: number; y: number }[];
 }
 
 export interface AnnotationRequest {

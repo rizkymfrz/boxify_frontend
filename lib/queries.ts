@@ -97,6 +97,11 @@ export function useSaveAndNavigate(projectId: string) {
           width: a.width,
           height: a.height,
           label: a.label,
+          type: a.type || "bbox",
+          points: a.points?.map((p) => ({
+            x: p.x / currentImage.width,
+            y: p.y / currentImage.height,
+          })),
         })),
       };
 
@@ -140,6 +145,11 @@ export function useManualSave(projectId: string) {
         width: a.width,
         height: a.height,
         label: a.label,
+        type: a.type || "bbox",
+        points: a.points?.map((p) => ({
+          x: p.x / currentImage.width,
+          y: p.y / currentImage.height,
+        })),
       })),
     };
 

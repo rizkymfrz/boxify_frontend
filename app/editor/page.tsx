@@ -155,6 +155,11 @@ function EditorContent() {
         width: box.width,
         height: box.height,
         label: box.label,
+        type: box.type || "bbox",
+        points: box.points?.map((p) => ({
+          x: p.x * annotationsData.image_width,
+          y: p.y * annotationsData.image_height,
+        })),
         color: colorMap.get(box.label) || "#FFFFFF",
       }));
       store.setAnnotations(currentImage.id, newAnnotations);

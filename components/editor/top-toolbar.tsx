@@ -34,6 +34,8 @@ import {
   IconEyeOff,
   IconRepeat,
   IconSquarePlus,
+  IconSquare,
+  IconPolygon,
 } from "@tabler/icons-react";
 
 interface TopToolbarProps {
@@ -384,6 +386,37 @@ export default function TopToolbar({
           </TooltipTrigger>
           <TooltipContent>Force draw new box (F)</TooltipContent>
         </Tooltip>
+
+        <div className="flex items-center bg-muted/50 p-0.5 h-7 border border-border">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={store.drawingMode === "bbox" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => store.setDrawingMode("bbox")}
+                className={cn("gap-1.5 h-full px-2", store.drawingMode === "bbox" && "shadow-sm")}
+              >
+                <IconSquare className="size-3.5" />
+                <span className="hidden xl:inline">Box</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Bounding Box Mode</TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={store.drawingMode === "polygon" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => store.setDrawingMode("polygon")}
+                className={cn("gap-1.5 h-full px-2", store.drawingMode === "polygon" && "shadow-sm")}
+              >
+                <IconPolygon className="size-3.5" />
+                <span className="hidden xl:inline">Polygon</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Polygon Mode</TooltipContent>
+          </Tooltip>
+        </div>
 
         <Tooltip>
           <TooltipTrigger asChild>

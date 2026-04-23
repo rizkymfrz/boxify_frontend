@@ -17,6 +17,8 @@ interface AnnotationState {
   showLabels: boolean;
   isForceCreateMode: boolean;
   activeModelName: string | null;
+  drawingMode: "bbox" | "polygon";
+  currentPolygonPoints: { x: number; y: number }[];
 
   // Actions
   setImages: (images: ImageItem[]) => void;
@@ -40,6 +42,9 @@ interface AnnotationState {
   toggleForceCreateMode: () => void;
   setActiveModelName: (name: string | null) => void;
   resetEditorState: () => void;
+  setDrawingMode: (mode: "bbox" | "polygon") => void;
+  addPolygonPoint: (point: { x: number; y: number }) => void;
+  clearCurrentPolygon: () => void;
 }
 
 const initialState = {
@@ -53,6 +58,8 @@ const initialState = {
   showLabels: true,
   isForceCreateMode: false,
   activeModelName: null,
+  drawingMode: "bbox" as "bbox" | "polygon",
+  currentPolygonPoints: [],
 };
 
 export const useAnnotationStore = create<AnnotationState>((set, get) => ({
@@ -287,6 +294,20 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
 
   setActiveModelName: (name: string | null) => {
     set({ activeModelName: name });
+  },
+
+  setDrawingMode: (mode: "bbox" | "polygon") => {
+    set({ drawingMode: mode });
+  },
+
+  addPolygonPoint: (point: { x: number; y: number }) => {
+    set((state) => ({
+      currentPolygonPoints: [...state.currentPolygonPoints, point],
+    }));
+  },
+
+  clearCurrentPolygon: () => {
+    set({ currentPolygonPoints: [] });
   },
 }));
 
