@@ -15,6 +15,7 @@ import {
 } from "./api";
 import { useAnnotationStore } from "./store";
 import type { ImageItem, AnnotationRequest } from "./types";
+import { toast } from "sonner";
 
 // ── Query: fetch image list from backend ──
 
@@ -93,9 +94,14 @@ export function useSaveAndNavigate(projectId: string) {
       // If no current image or dimensions unknown, just navigate
       if (
         !currentImage ||
-        currentImage.width === 0 ||
-        currentImage.height === 0
+        currentImage.width <= 0 ||
+        currentImage.height <= 0
       ) {
+        console.warn("[SaveAndNavigate] Skipping save: invalid dimensions", {
+          name: currentImage?.name,
+          w: currentImage?.width,
+          h: currentImage?.height,
+        });
         useAnnotationStore.getState().goToImage(targetIndex);
         return;
       }
@@ -144,13 +150,15 @@ export function useManualSave(projectId: string) {
     const state = useAnnotationStore.getState();
     const currentImage = state.images[state.currentImageIndex];
 
-    if (
-      !currentImage ||
-      currentImage.width === 0 ||
-      currentImage.height === 0
-    ) {
+    if (!currentImage || currentImage.width <= 0 || currentImage.height <= 0) {
+      toast.error("Cannot save: Image dimensions not loaded");
       return;
     }
+
+    console.log(`[ManualSave] Saving ${currentImage.name}`, {
+      w: currentImage.width,
+      h: currentImage.height,
+    });
 
     const currentAnnotations = state.annotations[currentImage.id] || [];
 

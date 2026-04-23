@@ -93,8 +93,17 @@ export default function CanvasCore({
     setImgDim({ w, h });
 
     // Report actual dimensions to store (used by save mutation)
-    store.setCurrentImageDimensions(w, h);
-  }, [loadedImage, containerWidth, containerHeight, imageUrl, store]);
+    if (currentImage?.id) {
+      store.setCurrentImageDimensions(currentImage.id, w, h);
+    }
+  }, [
+    loadedImage,
+    containerWidth,
+    containerHeight,
+    imageUrl,
+    currentImage?.id,
+    store,
+  ]);
 
   // ── Local drawing & panning state ──
   const [isDrawing, setIsDrawing] = useState(false);

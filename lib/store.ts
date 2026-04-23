@@ -19,7 +19,11 @@ interface AnnotationState {
   // Actions
   setImages: (images: ImageItem[]) => void;
   removeImage: (imageId: string) => void;
-  setCurrentImageDimensions: (width: number, height: number) => void;
+  setCurrentImageDimensions: (
+    imageId: string,
+    width: number,
+    height: number,
+  ) => void;
   nextImage: () => void;
   prevImage: () => void;
   goToImage: (index: number) => void;
@@ -98,14 +102,21 @@ export const useAnnotationStore = create<AnnotationState>((set, get) => ({
     set({ images: newImages, currentImageIndex: newIndex });
   },
 
-  setCurrentImageDimensions: (width: number, height: number) => {
-    const { images, currentImageIndex } = get();
-    if (images.length === 0 || currentImageIndex >= images.length) return;
+  setCurrentImageDimensions: (
+    imageId: string,
+    width: number,
+    height: number,
+  ) => {
+    const { images } = get();
+    const index = images.findIndex((img) => img.id === imageId);
+    if (index === -1) return;
+
+    const current = images[index];
     // Only update if dimensions changed (avoid unnecessary re-renders)
-    const current = images[currentImageIndex];
     if (current.width === width && current.height === height) return;
+
     const updated = [...images];
-    updated[currentImageIndex] = { ...current, width, height };
+    updated[index] = { ...current, width, height };
     set({ images: updated });
   },
 

@@ -146,6 +146,7 @@ function EditorContent() {
 
   // Sync fetched annotations to store
   useEffect(() => {
+    // Only apply if we have data AND the current image is still the same one we fetched for
     if (currentImage && annotationsData) {
       const colorMap = new Map(store.classLabels.map((l) => [l.name, l.color]));
       const newAnnotations = annotationsData.boxes.map((box) => ({
@@ -162,6 +163,19 @@ function EditorContent() {
         })),
         color: colorMap.get(box.label) || "#FFFFFF",
       }));
+
+      // Double check dimensions vs backend reported dimensions
+      if (
+        annotationsData.image_width > 0 &&
+        (currentImage.width === 0 || currentImage.height === 0)
+      ) {
+        store.setCurrentImageDimensions(
+          currentImage.id,
+          annotationsData.image_width,
+          annotationsData.image_height,
+        );
+      }
+
       store.setAnnotations(currentImage.id, newAnnotations);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
