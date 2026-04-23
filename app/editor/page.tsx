@@ -146,8 +146,14 @@ function EditorContent() {
 
   // Sync fetched annotations to store
   useEffect(() => {
-    // Only apply if we have data AND the current image is still the same one we fetched for
+    // Only apply if we have data AND the current image matches the data we fetched
     if (currentImage && annotationsData) {
+      // Security check: Ensure the filename in the payload matches the image we are viewing
+      if (annotationsData.filename && annotationsData.filename !== currentImage.name) {
+        console.warn(`[Sync] Skipping annotation sync: Filename mismatch (Expected ${currentImage.name}, got ${annotationsData.filename})`);
+        return;
+      }
+      
       const colorMap = new Map(store.classLabels.map((l) => [l.name, l.color]));
       const newAnnotations = annotationsData.boxes.map((box) => ({
         id: crypto.randomUUID(),
@@ -187,6 +193,9 @@ function EditorContent() {
       // Don't intercept if user is typing in an input
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      // Prevent spamming when holding the key
+      if (e.repeat) return;
 
       // Delete / Backspace → remove selected annotation
       if (e.key === "Delete" || e.key === "Backspace") {

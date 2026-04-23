@@ -62,6 +62,7 @@ export interface BoundingBoxSchema {
 export interface AnnotationRequest {
   image_width: number;
   image_height: number;
+  filename?: string;
   boxes: BoundingBoxSchema[];
 }
 

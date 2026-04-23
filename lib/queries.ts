@@ -108,6 +108,12 @@ export function useSaveAndNavigate(projectId: string) {
 
       const currentAnnotations = state.annotations[currentImage.id] || [];
 
+      console.log(`[SaveAndNavigate] Saving ${currentImage.name}`, {
+        w: currentImage.width,
+        h: currentImage.height,
+        boxCount: currentAnnotations.length,
+      });
+
       const payload: AnnotationRequest = {
         image_width: currentImage.width,
         image_height: currentImage.height,
